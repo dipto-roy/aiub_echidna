@@ -1,0 +1,248 @@
+/home/dip-roy/Echidna_2.2.6/echidna/time_test_contract.sol
+   1 |     | // SPDX-License-Identifier: MIT
+   2 |     | pragma solidity ^0.8.0;
+   3 |     | 
+   4 | *r  | contract TimeTestContract {
+   5 |     |     // State variables to track times
+   6 | *   |     uint256 public deploymentTime;
+   7 |     |     uint256 public lastCallTime;
+   8 |     |     uint256 public totalTimeDifference;
+   9 |     |     uint256 public callCount;
+  10 |     |     
+  11 |     |     // Events to log time information
+  12 |     |     event TimeRecorded(uint256 blockTimestamp, uint256 testTime, uint256 difference);
+  13 |     |     event TimeDifferenceCalculated(uint256 systemTime, uint256 testTime, uint256 diff);
+  14 |     |     
+  15 | *   |     constructor() {
+  16 | *   |         deploymentTime = block.timestamp;
+  17 | *   |         lastCallTime = block.timestamp;
+  18 | *   |         callCount = 0;
+  19 |     |     }
+  20 |     |     
+  21 |     |     // Function to get current system time (block.timestamp)
+  22 |     |     function getSystemTime() public view returns (uint256) {
+  23 |     |         return block.timestamp;
+  24 |     |     }
+  25 |     |     
+  26 |     |     // Function to simulate test time (using block.number as proxy)
+  27 | *   |     function getTestTime() public view returns (uint256) {
+  28 |     |         // Using block.number * 15 to simulate approximate seconds (15 sec per block average)
+  29 | *   |         return block.number * 15;
+  30 |     |     }
+  31 |     |     
+  32 |     |     // Function to get current block number
+  33 |     |     function getCurrentBlock() public view returns (uint256) {
+  34 |     |         return block.number;
+  35 |     |     }
+  36 |     |     
+  37 |     |     // Function to calculate and record time difference
+  38 | *   |     function recordTimeDifference() public {
+  39 | *   |         uint256 systemTime = block.timestamp;
+  40 | *   |         uint256 testTime = getTestTime();
+  41 | *   |         uint256 difference;
+  42 |     |         
+  43 | *   |         if (systemTime > testTime) {
+  44 | *   |             difference = systemTime - testTime;
+  45 |     |         } else {
+  46 |     |             difference = testTime - systemTime;
+  47 |     |         }
+  48 |     |         
+  49 | *   |         totalTimeDifference += difference;
+  50 | *   |         callCount++;
+  51 | *   |         lastCallTime = systemTime;
+  52 |     |         
+  53 | *   |         emit TimeRecorded(systemTime, testTime, difference);
+  54 |     |     }
+  55 |     |     
+  56 |     |     // Function to get time elapsed since deployment
+  57 | *   |     function getTimeSinceDeployment() public view returns (uint256) {
+  58 | *   |         return block.timestamp - deploymentTime;
+  59 |     |     }
+  60 |     |     
+  61 |     |     // Function to get time elapsed since last call
+  62 | *   |     function getTimeSinceLastCall() public view returns (uint256) {
+  63 | *   |         return block.timestamp - lastCallTime;
+  64 |     |     }
+  65 |     |     
+  66 |     |     // Function to get average time difference
+  67 |     |     function getAverageTimeDifference() public view returns (uint256) {
+  68 |     |         if (callCount == 0) return 0;
+  69 |     |         return totalTimeDifference / callCount;
+  70 |     |     }
+  71 |     |     
+  72 |     |     // Function to advance time artificially (for testing)
+  73 | *   |     function advanceTime(uint256 seconds_) public {
+  74 |     |         // This would typically be done with vm.warp in testing
+  75 |     |         // Here we just record the call
+  76 | *   |         emit TimeDifferenceCalculated(block.timestamp, block.timestamp + seconds_, seconds_);
+  77 |     |     }
+  78 |     |     
+  79 |     |     // Function to simulate time-dependent logic
+  80 |     |     function timeBasedFunction(uint256 targetTime) public view returns (bool) {
+  81 |     |         return block.timestamp >= targetTime;
+  82 |     |     }
+  83 |     |     
+  84 |     |     // Function to check if enough time has passed for an action
+  85 |     |     function canPerformAction(uint256 cooldownPeriod) public view returns (bool) {
+  86 |     |         return (block.timestamp - lastCallTime) >= cooldownPeriod;
+  87 |     |     }
+  88 |     |     
+  89 |     |     // Echidna properties for testing
+  90 |     |     function echidna_time_never_decreases() public view returns (bool) {
+  91 |     |         return block.timestamp >= deploymentTime;
+  92 |     |     }
+  93 |     |     
+  94 |     |     function echidna_time_difference_reasonable() public view returns (bool) {
+  95 |     |         uint256 systemTime = block.timestamp;
+  96 |     |         uint256 testTime = getTestTime();
+  97 |     |         uint256 difference;
+  98 |     |         
+  99 |     |         if (systemTime > testTime) {
+ 100 |     |             difference = systemTime - testTime;
+ 101 |     |         } else {
+ 102 |     |             difference = testTime - systemTime;
+ 103 |     |         }
+ 104 |     |         
+ 105 |     |         // Difference should be reasonable (less than 1 year in seconds)
+ 106 |     |         return difference < 365 days;
+ 107 |     |     }
+ 108 |     |     
+ 109 |     |     function echidna_call_count_increases() public view returns (bool) {
+ 110 |     |         return callCount >= 0; // Always true, but tests state consistency
+ 111 |     |     }
+ 112 |     |     
+ 113 |     |     function echidna_last_call_time_valid() public view returns (bool) {
+ 114 |     |         return lastCallTime >= deploymentTime && lastCallTime <= block.timestamp;
+ 115 |     |     }
+ 116 |     |     
+ 117 |     |     // Function to test time manipulation resistance
+ 118 |     |     function echidna_no_time_manipulation() public view returns (bool) {
+ 119 |     |         // Check that time flows forward consistently
+ 120 |     |         return block.timestamp >= lastCallTime;
+ 121 |     |     }
+ 122 |     | }
+ 123 |     | 
+ 124 |     | // Contract for more advanced time testing
+ 125 |     | contract AdvancedTimeTest {
+ 126 |     |     uint256 public startTime;
+ 127 |     |     uint256 public endTime;
+ 128 |     |     uint256[] public timeSnapshots;
+ 129 |     |     mapping(uint256 => uint256) public timeAtBlock;
+ 130 |     |     
+ 131 |     |     constructor() {
+ 132 |     |         startTime = block.timestamp;
+ 133 |     |         timeSnapshots.push(block.timestamp);
+ 134 |     |         timeAtBlock[block.number] = block.timestamp;
+ 135 |     |     }
+ 136 |     |     
+ 137 |     |     // Function to take a time snapshot
+ 138 |     |     function takeSnapshot() public {
+ 139 |     |         timeSnapshots.push(block.timestamp);
+ 140 |     |         timeAtBlock[block.number] = block.timestamp;
+ 141 |     |     }
+ 142 |     |     
+ 143 |     |     // Function to get time progression
+ 144 |     |     function getTimeProgression() public view returns (uint256[] memory) {
+ 145 |     |         return timeSnapshots;
+ 146 |     |     }
+ 147 |     |     
+ 148 |     |     // Function to check if time is moving forward
+ 149 |     |     function isTimeProgressing() public view returns (bool) {
+ 150 |     |         if (timeSnapshots.length < 2) return true;
+ 151 |     |         
+ 152 |     |         for (uint256 i = 1; i < timeSnapshots.length; i++) {
+ 153 |     |             if (timeSnapshots[i] < timeSnapshots[i-1]) {
+ 154 |     |                 return false;
+ 155 |     |             }
+ 156 |     |         }
+ 157 |     |         return true;
+ 158 |     |     }
+ 159 |     |     
+ 160 |     |     // Function to calculate time velocity (time change per block)
+ 161 |     |     function getTimeVelocity() public view returns (uint256) {
+ 162 |     |         if (timeSnapshots.length < 2) return 0;
+ 163 |     |         
+ 164 |     |         uint256 totalTimeChange = timeSnapshots[timeSnapshots.length - 1] - timeSnapshots[0];
+ 165 |     |         uint256 totalBlocks = timeSnapshots.length - 1;
+ 166 |     |         
+ 167 |     |         return totalTimeChange / totalBlocks;
+ 168 |     |     }
+ 169 |     |     
+ 170 |     |     // Echidna properties for advanced time testing
+ 171 |     |     function echidna_time_monotonic() public view returns (bool) {
+ 172 |     |         return isTimeProgressing();
+ 173 |     |     }
+ 174 |     |     
+ 175 |     |     function echidna_reasonable_time_velocity() public view returns (bool) {
+ 176 |     |         uint256 velocity = getTimeVelocity();
+ 177 |     |         // Time velocity should be reasonable (between 1 second and 1 hour per block)
+ 178 |     |         return velocity >= 1 && velocity <= 3600;
+ 179 |     |     }
+ 180 |     |     
+ 181 |     |     function echidna_snapshots_consistent() public view returns (bool) {
+ 182 |     |         return timeSnapshots.length > 0 && timeSnapshots[0] == startTime;
+ 183 |     |     }
+ 184 |     | }
+ 185 |     | 
+ 186 |     | // Contract to test time-based vulnerabilities
+ 187 |     | contract TimeVulnerabilityTest {
+ 188 |     |     uint256 public lastUpdateTime;
+ 189 |     |     uint256 public value;
+ 190 |     |     bool public locked;
+ 191 |     |     
+ 192 |     |     constructor() {
+ 193 |     |         lastUpdateTime = block.timestamp;
+ 194 |     |         value = 100;
+ 195 |     |         locked = false;
+ 196 |     |     }
+ 197 |     |     
+ 198 |     |     // Function with time-based logic that might be vulnerable
+ 199 |     |     function updateValue(uint256 newValue) public {
+ 200 |     |         require(!locked, "Contract is locked");
+ 201 |     |         require(block.timestamp > lastUpdateTime + 60, "Too soon to update");
+ 202 |     |         
+ 203 |     |         value = newValue;
+ 204 |     |         lastUpdateTime = block.timestamp;
+ 205 |     |     }
+ 206 |     |     
+ 207 |     |     // Function to lock the contract for a certain period
+ 208 |     |     function lockContract(uint256 duration) public {
+ 209 |     |         locked = true;
+ 210 |     |         // This could be vulnerable to time manipulation
+ 211 |     |         if (block.timestamp > lastUpdateTime + duration) {
+ 212 |     |             locked = false;
+ 213 |     |         }
+ 214 |     |     }
+ 215 |     |     
+ 216 |     |     // Function to check if contract can be unlocked
+ 217 |     |     function canUnlock() public view returns (bool) {
+ 218 |     |         return block.timestamp > lastUpdateTime + 300; // 5 minutes
+ 219 |     |     }
+ 220 |     |     
+ 221 |     |     // Emergency unlock (potential time-based vulnerability)
+ 222 |     |     function emergencyUnlock() public {
+ 223 |     |         require(block.timestamp > lastUpdateTime + 86400, "24 hours not passed"); // 24 hours
+ 224 |     |         locked = false;
+ 225 |     |     }
+ 226 |     |     
+ 227 |     |     // Echidna properties to test time-based vulnerabilities
+ 228 |     |     function echidna_no_immediate_double_update() public view returns (bool) {
+ 229 |     |         // This property might fail if time manipulation is possible
+ 230 |     |         return true; // Simplified for demonstration
+ 231 |     |     }
+ 232 |     |     
+ 233 |     |     function echidna_lock_consistency() public view returns (bool) {
+ 234 |     |         // Check that lock state is consistent with time
+ 235 |     |         if (locked) {
+ 236 |     |             return block.timestamp <= lastUpdateTime + 86400;
+ 237 |     |         }
+ 238 |     |         return true;
+ 239 |     |     }
+ 240 |     |     
+ 241 |     |     function echidna_value_update_time_check() public view returns (bool) {
+ 242 |     |         // Value should only be updatable after sufficient time has passed
+ 243 |     |         return lastUpdateTime <= block.timestamp;
+ 244 |     |     }
+ 245 |     | }
+ 246 |     | 
+

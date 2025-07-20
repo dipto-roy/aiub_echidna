@@ -1,0 +1,345 @@
+/home/dip-roy/Echidna_2.2.6/echidna/buggy_contract.sol
+   1 |     | // SPDX-License-Identifier: MIT
+   2 |     | pragma solidity ^0.8.0;
+   3 |     | 
+   4 |     | contract BuggyContract {
+   5 |     |     uint256 public counter;
+   6 |     |     mapping(address => uint256) public userCounts;
+   7 |     |     address public owner;
+   8 |     |     
+   9 |     |     constructor() {
+  10 |     |         owner = msg.sender;
+  11 |     |         counter = 0;
+  12 |     |     }
+  13 |     |     
+  14 |     |     function increment() public {
+  15 |     |         counter++;
+  16 |     |         userCounts[msg.sender]++;
+  17 |     |     }
+  18 |     |     
+  19 |     |     function decrement() public {
+  20 |     |         require(counter > 0, "Counter cannot be negative");
+  21 |     |         counter--;
+  22 |     |         userCounts[msg.sender]--;
+  23 |     |     }
+  24 |     |     
+  25 |     |     function reset() public {
+  26 |     |         require(msg.sender == owner, "Only owner can reset");
+  27 |     |         counter = 0;
+  28 |     |         // Bug: We don't reset user counts!
+  29 |     |     }
+  30 |     |     
+  31 |     |     function dangerousFunction(uint256 value) public {
+  32 |     |         // Bug: This can cause integer overflow in older Solidity versions
+  33 |     |         counter += value;
+  34 |     |     }
+  35 |     |     
+  36 |     |     // Echidna properties - these should always return true
+  37 |     |     function echidna_counter_never_negative() public view returns (bool) {
+  38 |     |         return counter >= 0;
+  39 |     |     }
+  40 |     |     
+  41 |     |     function echidna_user_count_never_negative() public view returns (bool) {
+  42 |     |         return userCounts[msg.sender] >= 0;
+  43 |     |     }
+  44 |     |     
+  45 |     |     function echidna_counter_reasonable() public view returns (bool) {
+  46 |     |         // This might fail due to the dangerous function
+  47 |     |         return counter < 1000000;
+  48 |     |     }
+  49 |     |     
+  50 |     |     function echidna_user_count_matches_increments() public view returns (bool) {
+  51 |     |         // This is a simplified check - in practice you'd track this more carefully
+  52 |     |         return userCounts[msg.sender] <= counter;
+  53 |     |     }
+  54 |     | }
+  55 |     | 
+  56 |     | contract GasLimitCheck {
+  57 |     |     uint256 public x;
+  58 |     | 
+  59 |     |     function heavyLoop(uint256 n) public {
+  60 |     |         require(n < 500, "Too much gas");
+  61 |     |         for (uint256 i = 0; i < n; i++) {
+  62 |     |             x += 1;
+  63 |     |         }
+  64 |     |     }
+  65 |     | 
+  66 |     |     function echidna_gas_safe() public view returns (bool) {
+  67 |     |         return true; // Contract reverts on high gas anyway
+  68 |     |     }
+  69 |     | }
+  70 |     | 
+  71 | *r  | contract TimeTestContract {
+  72 | *   |     uint256 public deploymentTime;
+  73 | *   |     uint256 public lastCallTime;
+  74 |     |     uint256 public callCount;
+  75 | *   |     uint256 public maxTimeDifference;
+  76 |     |     mapping(address => uint256) public userLastCallTime;
+  77 |     |     
+  78 |     |     event TimeEvent(uint256 blockTimestamp, uint256 testTime, uint256 difference);
+  79 |     |     
+  80 | *   |     constructor() {
+  81 | *   |         deploymentTime = block.timestamp;
+  82 | *   |         lastCallTime = block.timestamp;
+  83 | *   |         callCount = 0;
+  84 | *   |         maxTimeDifference = 0;
+  85 |     |     }
+  86 |     |     
+  87 | *   |     function updateTime() public {
+  88 | *   |         uint256 currentTime = block.timestamp;
+  89 | *   |         uint256 timeDiff = currentTime - lastCallTime;
+  90 |     |         
+  91 | *   |         if (timeDiff > maxTimeDifference) {
+  92 | *   |             maxTimeDifference = timeDiff;
+  93 |     |         }
+  94 |     |         
+  95 | *   |         userLastCallTime[msg.sender] = currentTime;
+  96 | *   |         lastCallTime = currentTime;
+  97 | *   |         callCount++;
+  98 |     |         
+  99 | *   |         emit TimeEvent(block.timestamp, currentTime, timeDiff);
+ 100 |     |     }
+ 101 |     |     
+ 102 | *   |     function getTimeSinceDeployment() public view returns (uint256) {
+ 103 | *   |         return block.timestamp - deploymentTime;
+ 104 |     |     }
+ 105 |     |     
+ 106 |     |     function getTimeDifference() public view returns (uint256) {
+ 107 |     |         return block.timestamp - lastCallTime;
+ 108 |     |     }
+ 109 |     |     
+ 110 | *   |     function getUserTimeDifference(address user) public view returns (uint256) {
+ 111 | *   |         if (userLastCallTime[user] == 0) {
+ 112 | *   |             return 0;
+ 113 |     |         }
+ 114 |     |         return block.timestamp - userLastCallTime[user];
+ 115 |     |     }
+ 116 |     |     
+ 117 |     |     // Echidna properties for time testing
+ 118 |     |     function echidna_time_always_increasing() public view returns (bool) {
+ 119 |     |         return block.timestamp >= deploymentTime;
+ 120 |     |     }
+ 121 |     |     
+ 122 |     |     function echidna_time_difference_reasonable() public view returns (bool) {
+ 123 |     |         uint256 timeDiff = getTimeDifference();
+ 124 |     |         return timeDiff < 365 days; // Time difference should be less than a year
+ 125 |     |     }
+ 126 |     |     
+ 127 |     |     function echidna_deployment_time_set() public view returns (bool) {
+ 128 |     |         return deploymentTime > 0;
+ 129 |     |     }
+ 130 |     |     
+ 131 |     |     function echidna_max_time_diff_reasonable() public view returns (bool) {
+ 132 |     |         return maxTimeDifference < 30 days; // Max time difference should be reasonable
+ 133 |     |     }
+ 134 |     | }
+ 135 |     | 
+ 136 |     | contract AdvancedTimeContract {
+ 137 |     |     struct TimeRecord {
+ 138 |     |         uint256 systemTime;    // block.timestamp
+ 139 |     |         uint256 testTime;      // simulated test time
+ 140 |     |         uint256 difference;    // difference between them
+ 141 |     |         uint256 callNumber;    // sequence number
+ 142 |     |     }
+ 143 |     |     
+ 144 |     |     TimeRecord[] public timeHistory;
+ 145 |     |     uint256 public testStartTime;
+ 146 |     |     uint256 public totalTestDuration;
+ 147 |     |     uint256 public averageTimeDifference;
+ 148 |     |     
+ 149 |     |     event TimeComparison(
+ 150 |     |         uint256 indexed callNumber,
+ 151 |     |         uint256 systemTime,
+ 152 |     |         uint256 testTime,
+ 153 |     |         uint256 difference,
+ 154 |     |         string phase
+ 155 |     |     );
+ 156 |     |     
+ 157 |     |     constructor() {
+ 158 |     |         testStartTime = block.timestamp;
+ 159 |     |         totalTestDuration = 0;
+ 160 |     |         averageTimeDifference = 0;
+ 161 |     |     }
+ 162 |     |     
+ 163 |     |     function recordTimePoint(string memory phase) public {
+ 164 |     |         uint256 systemTime = block.timestamp;
+ 165 |     |         uint256 testTime = testStartTime + totalTestDuration;
+ 166 |     |         uint256 difference = systemTime > testTime ? systemTime - testTime : testTime - systemTime;
+ 167 |     |         
+ 168 |     |         TimeRecord memory record = TimeRecord({
+ 169 |     |             systemTime: systemTime,
+ 170 |     |             testTime: testTime,
+ 171 |     |             difference: difference,
+ 172 |     |             callNumber: timeHistory.length + 1
+ 173 |     |         });
+ 174 |     |         
+ 175 |     |         timeHistory.push(record);
+ 176 |     |         
+ 177 |     |         // Update average difference
+ 178 |     |         if (timeHistory.length > 0) {
+ 179 |     |             uint256 totalDifference = 0;
+ 180 |     |             for (uint i = 0; i < timeHistory.length; i++) {
+ 181 |     |                 totalDifference += timeHistory[i].difference;
+ 182 |     |             }
+ 183 |     |             averageTimeDifference = totalDifference / timeHistory.length;
+ 184 |     |         }
+ 185 |     |         
+ 186 |     |         totalTestDuration += 1 hours; // Simulate test progression
+ 187 |     |         
+ 188 |     |         emit TimeComparison(record.callNumber, systemTime, testTime, difference, phase);
+ 189 |     |     }
+ 190 |     |     
+ 191 |     |     function getLatestTimeRecord() public view returns (TimeRecord memory) {
+ 192 |     |         require(timeHistory.length > 0, "No time records yet");
+ 193 |     |         return timeHistory[timeHistory.length - 1];
+ 194 |     |     }
+ 195 |     |     
+ 196 |     |     function getTimeRecordCount() public view returns (uint256) {
+ 197 |     |         return timeHistory.length;
+ 198 |     |     }
+ 199 |     |     
+ 200 |     |     function getCurrentTimeDifference() public view returns (uint256) {
+ 201 |     |         uint256 systemTime = block.timestamp;
+ 202 |     |         uint256 testTime = testStartTime + totalTestDuration;
+ 203 |     |         return systemTime > testTime ? systemTime - testTime : testTime - systemTime;
+ 204 |     |     }
+ 205 |     |     
+ 206 |     |     function getSystemVsTestTime() public view returns (uint256 systemTime, uint256 testTime, uint256 difference) {
+ 207 |     |         systemTime = block.timestamp;
+ 208 |     |         testTime = testStartTime + totalTestDuration;
+ 209 |     |         difference = systemTime > testTime ? systemTime - testTime : testTime - systemTime;
+ 210 |     |     }
+ 211 |     |     
+ 212 |     |     // Echidna properties for advanced time testing
+ 213 |     |     function echidna_system_time_valid() public view returns (bool) {
+ 214 |     |         return block.timestamp > 0;
+ 215 |     |     }
+ 216 |     |     
+ 217 |     |     function echidna_test_time_progression() public view returns (bool) {
+ 218 |     |         uint256 currentTestTime = testStartTime + totalTestDuration;
+ 219 |     |         return currentTestTime >= testStartTime;
+ 220 |     |     }
+ 221 |     |     
+ 222 |     |     function echidna_time_difference_tracked() public view returns (bool) {
+ 223 |     |         if (timeHistory.length == 0) return true;
+ 224 |     |         return getLatestTimeRecord().difference >= 0;
+ 225 |     |     }
+ 226 |     |     
+ 227 |     |     function echidna_average_difference_reasonable() public view returns (bool) {
+ 228 |     |         return averageTimeDifference < 100 days; // Should be reasonable
+ 229 |     |     }
+ 230 |     |     
+ 231 |     |     function echidna_time_history_consistent() public view returns (bool) {
+ 232 |     |         if (timeHistory.length <= 1) return true;
+ 233 |     |         
+ 234 |     |         for (uint i = 1; i < timeHistory.length; i++) {
+ 235 |     |             if (timeHistory[i].callNumber <= timeHistory[i-1].callNumber) {
+ 236 |     |                 return false;
+ 237 |     |             }
+ 238 |     |         }
+ 239 |     |         return true;
+ 240 |     |     }
+ 241 |     | }
+ 242 |     | 
+ 243 |     | contract RealtimeVsTestTime {
+ 244 |     |     uint256 public contractDeployTime;
+ 245 |     |     uint256 public simulatedTime;
+ 246 |     |     uint256 public totalInteractions;
+ 247 |     |     uint256 public maxObservedDifference;
+ 248 |     |     
+ 249 |     |     struct TimeMeasurement {
+ 250 |     |         uint256 realTime;
+ 251 |     |         uint256 simTime;
+ 252 |     |         uint256 difference;
+ 253 |     |         address caller;
+ 254 |     |         string action;
+ 255 |     |     }
+ 256 |     |     
+ 257 |     |     TimeMeasurement[] public measurements;
+ 258 |     |     
+ 259 |     |     event TimeAnalysis(
+ 260 |     |         uint256 realTime,
+ 261 |     |         uint256 simulatedTime,
+ 262 |     |         uint256 difference,
+ 263 |     |         address caller,
+ 264 |     |         string action
+ 265 |     |     );
+ 266 |     |     
+ 267 |     |     constructor() {
+ 268 |     |         contractDeployTime = block.timestamp;
+ 269 |     |         simulatedTime = block.timestamp;
+ 270 |     |         totalInteractions = 0;
+ 271 |     |         maxObservedDifference = 0;
+ 272 |     |     }
+ 273 |     |     
+ 274 |     |     function performAction(string memory actionName) public {
+ 275 |     |         uint256 realTime = block.timestamp;
+ 276 |     |         simulatedTime += 3600; // Advance simulated time by 1 hour per action
+ 277 |     |         
+ 278 |     |         uint256 difference = realTime > simulatedTime ? 
+ 279 |     |             realTime - simulatedTime : 
+ 280 |     |             simulatedTime - realTime;
+ 281 |     |         
+ 282 |     |         if (difference > maxObservedDifference) {
+ 283 |     |             maxObservedDifference = difference;
+ 284 |     |         }
+ 285 |     |         
+ 286 |     |         TimeMeasurement memory measurement = TimeMeasurement({
+ 287 |     |             realTime: realTime,
+ 288 |     |             simTime: simulatedTime,
+ 289 |     |             difference: difference,
+ 290 |     |             caller: msg.sender,
+ 291 |     |             action: actionName
+ 292 |     |         });
+ 293 |     |         
+ 294 |     |         measurements.push(measurement);
+ 295 |     |         totalInteractions++;
+ 296 |     |         
+ 297 |     |         emit TimeAnalysis(realTime, simulatedTime, difference, msg.sender, actionName);
+ 298 |     |     }
+ 299 |     |     
+ 300 |     |     function getTimeDifferenceStats() public view returns (
+ 301 |     |         uint256 currentReal,
+ 302 |     |         uint256 currentSim,
+ 303 |     |         uint256 currentDiff,
+ 304 |     |         uint256 maxDiff,
+ 305 |     |         uint256 interactions
+ 306 |     |     ) {
+ 307 |     |         currentReal = block.timestamp;
+ 308 |     |         currentSim = simulatedTime;
+ 309 |     |         currentDiff = currentReal > currentSim ? currentReal - currentSim : currentSim - currentReal;
+ 310 |     |         maxDiff = maxObservedDifference;
+ 311 |     |         interactions = totalInteractions;
+ 312 |     |     }
+ 313 |     |     
+ 314 |     |     function getMeasurement(uint256 index) public view returns (TimeMeasurement memory) {
+ 315 |     |         require(index < measurements.length, "Invalid measurement index");
+ 316 |     |         return measurements[index];
+ 317 |     |     }
+ 318 |     |     
+ 319 |     |     // Echidna properties for realtime vs test time
+ 320 |     |     function echidna_real_time_advances() public view returns (bool) {
+ 321 |     |         return block.timestamp >= contractDeployTime;
+ 322 |     |     }
+ 323 |     |     
+ 324 |     |     function echidna_simulated_time_advances() public view returns (bool) {
+ 325 |     |         return simulatedTime >= contractDeployTime;
+ 326 |     |     }
+ 327 |     |     
+ 328 |     |     function echidna_time_difference_bounded() public view returns (bool) {
+ 329 |     |         uint256 currentDiff = block.timestamp > simulatedTime ? 
+ 330 |     |             block.timestamp - simulatedTime : 
+ 331 |     |             simulatedTime - block.timestamp;
+ 332 |     |         return currentDiff < 365 days; // Difference should be less than a year
+ 333 |     |     }
+ 334 |     |     
+ 335 |     |     function echidna_max_difference_reasonable() public view returns (bool) {
+ 336 |     |         return maxObservedDifference < 100 days;
+ 337 |     |     }
+ 338 |     |     
+ 339 |     |     function echidna_measurements_count_matches() public view returns (bool) {
+ 340 |     |         return measurements.length == totalInteractions;
+ 341 |     |     }
+ 342 |     | }
+ 343 |     | 
+

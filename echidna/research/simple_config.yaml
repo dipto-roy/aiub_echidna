@@ -1,0 +1,10 @@
+testMode: "property"
+testLimit: 5000
+seqLen: 50
+shrinkLimit: 5000
+coverage: true
+corpusDir: "./research/corpus"
+workers: 4
+format: "text"
+timeout: 300
+prefix: "echidna_"

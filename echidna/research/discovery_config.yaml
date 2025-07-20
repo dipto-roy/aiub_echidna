@@ -1,0 +1,44 @@
+# Echidna configuration optimized for novel vulnerability discovery
+testMode: "property"
+testLimit: 1000000  # Extended testing for deep exploration
+seqLen: 100         # Longer sequences to find complex interactions
+shrinkLimit: 10000  # Thorough shrinking for minimal reproducers
+
+# Coverage and corpus management
+coverage: true
+corpusDir: "./research/corpus"
+coverageFormats: ["txt", "html", "lcov"]
+
+# Optimization for vulnerability discovery
+workers: 8          # Parallel execution for faster exploration
+dictFreq: 0.3       # Balanced dictionary usage
+delay: 1000000      # Allow significant time delays for temporal vulnerabilities
+
+# Time-based testing (critical for novel temporal vulnerabilities)
+maxTimeDelay: 604800    # Up to 1 week time delays
+maxBlockDelay: 100000   # Large block jumps
+
+# Gas analysis for detecting anomalies
+estimateGas: true
+gasLimit: 12000000      # High gas limit for complex operations
+
+# Enhanced mutation strategies
+mutationConsts: [0, 1, 2, 3, 100, 1000, 1000000, 2147483647, 4294967295]
+cryticArgs: ["--solc-version", "0.8.0", "--disable-detectors", "all"]
+
+# Logging and output
+format: "text"
+timeout: 7200       # 2 hours per contract
+psender: "0x10000"
+sender: ["0x10000", "0x20000", "0x30000", "0x40000", "0x50000"]
+
+# Contract addressing
+contractAddr: "0x00a329c0648769a73afac7f9381e08fb43dbea72"
+deployer: "0x00a329c0648769a73afac7f9381e08fb43dbea70"
+
+# Prefix for property functions
+prefix: "echidna_"
+
+# Advanced fuzzing parameters for vulnerability discovery
+checkAsserts: true
+allContracts: false

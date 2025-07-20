@@ -1,0 +1,418 @@
+<style> code { white-space: pre-wrap; display: block; background-color: #eee; }.executed { background-color: #afa; }.reverted { background-color: #ffa; }.unexecuted { background-color: #faa; }.neutral { background-color: #eee; }</style><b>/home/dip-roy/Echidna_2.2.6/echidna/research/vulnerability_discovery.sol</b>
+<code>
+   1 |     | <span class='neutral'>// SPDX-License-Identifier: MIT</span>
+   2 |     | <span class='neutral'>pragma solidity ^0.8.0;</span>
+   3 |     | <span class='neutral'></span>
+   4 |     | <span class='neutral'>/**</span>
+   5 |     | <span class='neutral'> * @title Novel Vulnerability Discovery Lab</span>
+   6 |     | <span class='neutral'> * @dev Framework for discovering new vulnerability classes through systematic fuzzing</span>
+   7 |     | <span class='neutral'> */</span>
+   8 |     | <span class='neutral'></span>
+   9 |     | <span class='neutral'>// =============================================================================</span>
+  10 |     | <span class='neutral'>// 1. STATE CORRUPTION VULNERABILITIES</span>
+  11 |     | <span class='neutral'>// =============================================================================</span>
+  12 |     | <span class='neutral'></span>
+  13 | *r  | <span class='executed'>contract StateCorruptionLab {</span>
+  14 |     | <span class='unexecuted'>    mapping(address =&gt; uint256) public balances;</span>
+  15 | *   | <span class='executed'>    mapping(address =&gt; mapping(address =&gt; uint256)) public allowances;</span>
+  16 |     | <span class='unexecuted'>    uint256 public totalSupply;</span>
+  17 |     | <span class='neutral'>    uint256 private lockedAmount;</span>
+  18 |     | <span class='neutral'>    bool private locked;</span>
+  19 |     | <span class='unexecuted'>    uint256 public lastOperation;</span>
+  20 |     | <span class='neutral'>    </span>
+  21 |     | <span class='neutral'>    // Novel pattern: State inconsistency through complex operations</span>
+  22 | *   | <span class='executed'>    function complexTransfer(address from, address to, uint256 amount, bool useAllowance) public {</span>
+  23 | *   | <span class='executed'>        if (useAllowance) {</span>
+  24 | *r  | <span class='executed'>            require(allowances[from][msg.sender] &gt;= amount, &quot;Insufficient allowance&quot;);</span>
+  25 | *   | <span class='executed'>            allowances[from][msg.sender] -= amount;</span>
+  26 |     | <span class='neutral'>        } else {</span>
+  27 | *r  | <span class='executed'>            require(msg.sender == from, &quot;Unauthorized&quot;);</span>
+  28 |     | <span class='neutral'>        }</span>
+  29 |     | <span class='neutral'>        </span>
+  30 | *r  | <span class='executed'>        require(balances[from] &gt;= amount, &quot;Insufficient balance&quot;);</span>
+  31 |     | <span class='neutral'>        </span>
+  32 |     | <span class='neutral'>        // Potential vulnerability: State update ordering</span>
+  33 | *   | <span class='executed'>        balances[from] -= amount;</span>
+  34 | *   | <span class='executed'>        lastOperation = block.timestamp;</span>
+  35 | *   | <span class='executed'>        balances[to] += amount;</span>
+  36 |     | <span class='neutral'>        </span>
+  37 |     | <span class='neutral'>        // Complex condition that might create edge cases</span>
+  38 | *   | <span class='executed'>        if (amount &gt; totalSupply / 100 &amp;&amp; !locked) {</span>
+  39 |     | <span class='unexecuted'>            lockedAmount += amount / 10;</span>
+  40 |     | <span class='neutral'>        }</span>
+  41 |     | <span class='neutral'>    }</span>
+  42 |     | <span class='neutral'>    </span>
+  43 |     | <span class='neutral'>    // Echidna properties to discover state corruption</span>
+  44 |     | <span class='unexecuted'>    function echidna_total_balance_conservation() public view returns (bool) {</span>
+  45 |     | <span class='neutral'>        // This should always hold, failures indicate novel state corruption</span>
+  46 |     | <span class='unexecuted'>        uint256 sumBalances = 0;</span>
+  47 |     | <span class='neutral'>        // Note: In real implementation, we&#39;d need to track all addresses</span>
+  48 |     | <span class='unexecuted'>        return true; // Simplified for research framework</span>
+  49 |     | <span class='neutral'>    }</span>
+  50 |     | <span class='neutral'>    </span>
+  51 |     | <span class='unexecuted'>    function echidna_allowance_consistency() public view returns (bool) {</span>
+  52 |     | <span class='neutral'>        // Check for negative allowances or overflow conditions</span>
+  53 |     | <span class='unexecuted'>        return allowances[msg.sender][address(this)] &lt;= type(uint256).max;</span>
+  54 |     | <span class='neutral'>    }</span>
+  55 |     | <span class='neutral'>    </span>
+  56 |     | <span class='unexecuted'>    function echidna_locked_amount_bounds() public view returns (bool) {</span>
+  57 |     | <span class='unexecuted'>        return lockedAmount &lt;= totalSupply;</span>
+  58 |     | <span class='neutral'>    }</span>
+  59 |     | <span class='neutral'>}</span>
+  60 |     | <span class='neutral'></span>
+  61 |     | <span class='neutral'>// =============================================================================</span>
+  62 |     | <span class='neutral'>// 2. TEMPORAL LOGIC VULNERABILITIES</span>
+  63 |     | <span class='neutral'>// =============================================================================</span>
+  64 |     | <span class='neutral'></span>
+  65 |     | <span class='unexecuted'>contract TemporalLogicLab {</span>
+  66 |     | <span class='neutral'>    struct TimedAction {</span>
+  67 |     | <span class='neutral'>        uint256 timestamp;</span>
+  68 |     | <span class='neutral'>        address user;</span>
+  69 |     | <span class='neutral'>        uint256 amount;</span>
+  70 |     | <span class='neutral'>        bool executed;</span>
+  71 |     | <span class='neutral'>    }</span>
+  72 |     | <span class='neutral'>    </span>
+  73 |     | <span class='unexecuted'>    mapping(uint256 =&gt; TimedAction) public timedActions;</span>
+  74 |     | <span class='unexecuted'>    mapping(address =&gt; uint256) public userLastAction;</span>
+  75 |     | <span class='unexecuted'>    uint256 public nextActionId;</span>
+  76 |     | <span class='unexecuted'>    uint256 public constant COOLDOWN = 1 hours;</span>
+  77 |     | <span class='unexecuted'>    uint256 public constant EXECUTION_WINDOW = 30 minutes;</span>
+  78 |     | <span class='neutral'>    </span>
+  79 |     | <span class='neutral'>    // Novel pattern: Complex temporal dependencies</span>
+  80 |     | <span class='unexecuted'>    function scheduleAction(uint256 amount, uint256 delay) public {</span>
+  81 |     | <span class='unexecuted'>        require(delay &gt;= COOLDOWN, &quot;Delay too short&quot;);</span>
+  82 |     | <span class='unexecuted'>        require(block.timestamp &gt;= userLastAction[msg.sender] + COOLDOWN, &quot;User cooldown&quot;);</span>
+  83 |     | <span class='neutral'>        </span>
+  84 |     | <span class='unexecuted'>        uint256 actionId = nextActionId++;</span>
+  85 |     | <span class='unexecuted'>        timedActions[actionId] = TimedAction({</span>
+  86 |     | <span class='unexecuted'>            timestamp: block.timestamp + delay,</span>
+  87 |     | <span class='unexecuted'>            user: msg.sender,</span>
+  88 |     | <span class='unexecuted'>            amount: amount,</span>
+  89 |     | <span class='unexecuted'>            executed: false</span>
+  90 |     | <span class='neutral'>        });</span>
+  91 |     | <span class='neutral'>        </span>
+  92 |     | <span class='unexecuted'>        userLastAction[msg.sender] = block.timestamp;</span>
+  93 |     | <span class='neutral'>    }</span>
+  94 |     | <span class='neutral'>    </span>
+  95 |     | <span class='unexecuted'>    function executeAction(uint256 actionId) public {</span>
+  96 |     | <span class='unexecuted'>        TimedAction storage action = timedActions[actionId];</span>
+  97 |     | <span class='unexecuted'>        require(action.user == msg.sender, &quot;Not your action&quot;);</span>
+  98 |     | <span class='unexecuted'>        require(!action.executed, &quot;Already executed&quot;);</span>
+  99 |     | <span class='unexecuted'>        require(block.timestamp &gt;= action.timestamp, &quot;Too early&quot;);</span>
+ 100 |     | <span class='unexecuted'>        require(block.timestamp &lt;= action.timestamp + EXECUTION_WINDOW, &quot;Too late&quot;);</span>
+ 101 |     | <span class='neutral'>        </span>
+ 102 |     | <span class='unexecuted'>        action.executed = true;</span>
+ 103 |     | <span class='neutral'>        // Process action...</span>
+ 104 |     | <span class='neutral'>    }</span>
+ 105 |     | <span class='neutral'>    </span>
+ 106 |     | <span class='neutral'>    // Properties to discover temporal vulnerabilities</span>
+ 107 |     | <span class='unexecuted'>    function echidna_no_time_travel() public view returns (bool) {</span>
+ 108 |     | <span class='unexecuted'>        return block.timestamp &gt;= userLastAction[msg.sender];</span>
+ 109 |     | <span class='neutral'>    }</span>
+ 110 |     | <span class='neutral'>    </span>
+ 111 |     | <span class='unexecuted'>    function echidna_execution_window_respected() public view returns (bool) {</span>
+ 112 |     | <span class='neutral'>        // Check that no executed action violates timing constraints</span>
+ 113 |     | <span class='unexecuted'>        return true; // Simplified - would check all actions in real implementation</span>
+ 114 |     | <span class='neutral'>    }</span>
+ 115 |     | <span class='neutral'>    </span>
+ 116 |     | <span class='unexecuted'>    function echidna_cooldown_enforced() public view returns (bool) {</span>
+ 117 |     | <span class='neutral'>        // Verify cooldown periods are properly enforced</span>
+ 118 |     | <span class='unexecuted'>        return userLastAction[msg.sender] &lt;= block.timestamp;</span>
+ 119 |     | <span class='neutral'>    }</span>
+ 120 |     | <span class='neutral'>}</span>
+ 121 |     | <span class='neutral'></span>
+ 122 |     | <span class='neutral'>// =============================================================================</span>
+ 123 |     | <span class='neutral'>// 3. CROSS-FUNCTIONAL INTERACTION VULNERABILITIES</span>
+ 124 |     | <span class='neutral'>// =============================================================================</span>
+ 125 |     | <span class='neutral'></span>
+ 126 |     | <span class='unexecuted'>contract CrossFunctionalLab {</span>
+ 127 |     | <span class='neutral'>    enum Mode { NORMAL, EMERGENCY, MAINTENANCE }</span>
+ 128 |     | <span class='unexecuted'>    Mode public currentMode;</span>
+ 129 |     | <span class='neutral'>    </span>
+ 130 |     | <span class='unexecuted'>    mapping(address =&gt; uint256) public stakes;</span>
+ 131 |     | <span class='unexecuted'>    mapping(address =&gt; uint256) public rewards;</span>
+ 132 |     | <span class='unexecuted'>    mapping(address =&gt; bool) public isValidator;</span>
+ 133 |     | <span class='neutral'>    </span>
+ 134 |     | <span class='unexecuted'>    uint256 public totalStaked;</span>
+ 135 |     | <span class='unexecuted'>    uint256 public rewardPool;</span>
+ 136 |     | <span class='unexecuted'>    address public admin;</span>
+ 137 |     | <span class='neutral'>    </span>
+ 138 |     | <span class='neutral'>    modifier onlyMode(Mode requiredMode) {</span>
+ 139 |     | <span class='unexecuted'>        require(currentMode == requiredMode, &quot;Wrong mode&quot;);</span>
+ 140 |     | <span class='neutral'>        _;</span>
+ 141 |     | <span class='neutral'>    }</span>
+ 142 |     | <span class='neutral'>    </span>
+ 143 |     | <span class='neutral'>    modifier onlyAdmin() {</span>
+ 144 |     | <span class='unexecuted'>        require(msg.sender == admin, &quot;Not admin&quot;);</span>
+ 145 |     | <span class='neutral'>        _;</span>
+ 146 |     | <span class='neutral'>    }</span>
+ 147 |     | <span class='neutral'>    </span>
+ 148 |     | <span class='unexecuted'>    constructor() {</span>
+ 149 |     | <span class='unexecuted'>        admin = msg.sender;</span>
+ 150 |     | <span class='unexecuted'>        currentMode = Mode.NORMAL;</span>
+ 151 |     | <span class='neutral'>    }</span>
+ 152 |     | <span class='neutral'>    </span>
+ 153 |     | <span class='neutral'>    // Function interactions that might create vulnerabilities</span>
+ 154 |     | <span class='unexecuted'>    function stake(uint256 amount) public onlyMode(Mode.NORMAL) {</span>
+ 155 |     | <span class='unexecuted'>        stakes[msg.sender] += amount;</span>
+ 156 |     | <span class='unexecuted'>        totalStaked += amount;</span>
+ 157 |     | <span class='neutral'>        </span>
+ 158 |     | <span class='unexecuted'>        if (stakes[msg.sender] &gt;= 1000 ether) {</span>
+ 159 |     | <span class='unexecuted'>            isValidator[msg.sender] = true;</span>
+ 160 |     | <span class='neutral'>        }</span>
+ 161 |     | <span class='neutral'>    }</span>
+ 162 |     | <span class='neutral'>    </span>
+ 163 |     | <span class='unexecuted'>    function unstake(uint256 amount) public {</span>
+ 164 |     | <span class='unexecuted'>        require(stakes[msg.sender] &gt;= amount, &quot;Insufficient stake&quot;);</span>
+ 165 |     | <span class='neutral'>        </span>
+ 166 |     | <span class='unexecuted'>        stakes[msg.sender] -= amount;</span>
+ 167 |     | <span class='unexecuted'>        totalStaked -= amount;</span>
+ 168 |     | <span class='neutral'>        </span>
+ 169 |     | <span class='unexecuted'>        if (stakes[msg.sender] &lt; 1000 ether) {</span>
+ 170 |     | <span class='unexecuted'>            isValidator[msg.sender] = false;</span>
+ 171 |     | <span class='neutral'>        }</span>
+ 172 |     | <span class='neutral'>    }</span>
+ 173 |     | <span class='neutral'>    </span>
+ 174 |     | <span class='unexecuted'>    function distributeRewards() public onlyMode(Mode.NORMAL) {</span>
+ 175 |     | <span class='unexecuted'>        require(isValidator[msg.sender], &quot;Not validator&quot;);</span>
+ 176 |     | <span class='neutral'>        </span>
+ 177 |     | <span class='unexecuted'>        uint256 reward = rewardPool / getValidatorCount();</span>
+ 178 |     | <span class='unexecuted'>        rewards[msg.sender] += reward;</span>
+ 179 |     | <span class='unexecuted'>        rewardPool -= reward;</span>
+ 180 |     | <span class='neutral'>    }</span>
+ 181 |     | <span class='neutral'>    </span>
+ 182 |     | <span class='unexecuted'>    function switchMode(Mode newMode) public onlyAdmin {</span>
+ 183 |     | <span class='unexecuted'>        currentMode = newMode;</span>
+ 184 |     | <span class='neutral'>        </span>
+ 185 |     | <span class='neutral'>        // Mode-specific logic that might create vulnerabilities</span>
+ 186 |     | <span class='unexecuted'>        if (newMode == Mode.EMERGENCY) {</span>
+ 187 |     | <span class='neutral'>            // Emergency logic</span>
+ 188 |     | <span class='unexecuted'>            rewardPool = 0; // Potential vulnerability: Reward loss</span>
+ 189 |     | <span class='neutral'>        }</span>
+ 190 |     | <span class='neutral'>    }</span>
+ 191 |     | <span class='neutral'>    </span>
+ 192 |     | <span class='unexecuted'>    function getValidatorCount() public view returns (uint256) {</span>
+ 193 |     | <span class='neutral'>        // Simplified - would count all validators in real implementation</span>
+ 194 |     | <span class='unexecuted'>        return isValidator[msg.sender] ? 1 : 0;</span>
+ 195 |     | <span class='neutral'>    }</span>
+ 196 |     | <span class='neutral'>    </span>
+ 197 |     | <span class='neutral'>    // Properties to discover cross-functional vulnerabilities</span>
+ 198 |     | <span class='unexecuted'>    function echidna_stake_consistency() public view returns (bool) {</span>
+ 199 |     | <span class='unexecuted'>        return stakes[msg.sender] &lt;= totalStaked;</span>
+ 200 |     | <span class='neutral'>    }</span>
+ 201 |     | <span class='neutral'>    </span>
+ 202 |     | <span class='unexecuted'>    function echidna_validator_status_consistency() public view returns (bool) {</span>
+ 203 |     | <span class='unexecuted'>        if (stakes[msg.sender] &gt;= 1000 ether) {</span>
+ 204 |     | <span class='unexecuted'>            return isValidator[msg.sender];</span>
+ 205 |     | <span class='neutral'>        }</span>
+ 206 |     | <span class='unexecuted'>        return true;</span>
+ 207 |     | <span class='neutral'>    }</span>
+ 208 |     | <span class='neutral'>    </span>
+ 209 |     | <span class='unexecuted'>    function echidna_mode_safety() public view returns (bool) {</span>
+ 210 |     | <span class='neutral'>        // Emergency mode shouldn&#39;t break core invariants</span>
+ 211 |     | <span class='unexecuted'>        return totalStaked &gt;= stakes[msg.sender];</span>
+ 212 |     | <span class='neutral'>    }</span>
+ 213 |     | <span class='neutral'>    </span>
+ 214 |     | <span class='unexecuted'>    function echidna_reward_conservation() public view returns (bool) {</span>
+ 215 |     | <span class='neutral'>        // Rewards should not exceed pool unless in specific conditions</span>
+ 216 |     | <span class='unexecuted'>        return rewards[msg.sender] &lt;= 1000000 ether; // Reasonable upper bound</span>
+ 217 |     | <span class='neutral'>    }</span>
+ 218 |     | <span class='neutral'>}</span>
+ 219 |     | <span class='neutral'></span>
+ 220 |     | <span class='neutral'>// =============================================================================</span>
+ 221 |     | <span class='neutral'>// 4. ECONOMIC LOGIC VULNERABILITIES</span>
+ 222 |     | <span class='neutral'>// =============================================================================</span>
+ 223 |     | <span class='neutral'></span>
+ 224 |     | <span class='unexecuted'>contract EconomicLogicLab {</span>
+ 225 |     | <span class='neutral'>    struct Pool {</span>
+ 226 |     | <span class='neutral'>        uint256 tokenA;</span>
+ 227 |     | <span class='neutral'>        uint256 tokenB;</span>
+ 228 |     | <span class='neutral'>        uint256 totalShares;</span>
+ 229 |     | <span class='neutral'>        uint256 fee; // Basis points (e.g., 30 = 0.3%)</span>
+ 230 |     | <span class='neutral'>    }</span>
+ 231 |     | <span class='neutral'>    </span>
+ 232 |     | <span class='unexecuted'>    Pool public pool;</span>
+ 233 |     | <span class='unexecuted'>    mapping(address =&gt; uint256) public shares;</span>
+ 234 |     | <span class='unexecuted'>    mapping(address =&gt; uint256) public lastPriceSnapshot;</span>
+ 235 |     | <span class='neutral'>    </span>
+ 236 |     | <span class='unexecuted'>    uint256 public constant MIN_LIQUIDITY = 1000;</span>
+ 237 |     | <span class='unexecuted'>    uint256 public priceOracle;</span>
+ 238 |     | <span class='unexecuted'>    bool public emergencyStop;</span>
+ 239 |     | <span class='neutral'>    </span>
+ 240 |     | <span class='neutral'>    // Complex economic interactions</span>
+ 241 |     | <span class='unexecuted'>    function addLiquidity(uint256 amountA, uint256 amountB) public {</span>
+ 242 |     | <span class='unexecuted'>        require(!emergencyStop, &quot;Emergency stop active&quot;);</span>
+ 243 |     | <span class='unexecuted'>        require(amountA &gt; 0 &amp;&amp; amountB &gt; 0, &quot;Invalid amounts&quot;);</span>
+ 244 |     | <span class='neutral'>        </span>
+ 245 |     | <span class='unexecuted'>        uint256 sharesMinted;</span>
+ 246 |     | <span class='neutral'>        </span>
+ 247 |     | <span class='unexecuted'>        if (pool.totalShares == 0) {</span>
+ 248 |     | <span class='unexecuted'>            sharesMinted = sqrt(amountA * amountB);</span>
+ 249 |     | <span class='unexecuted'>            require(sharesMinted &gt;= MIN_LIQUIDITY, &quot;Insufficient liquidity&quot;);</span>
+ 250 |     | <span class='unexecuted'>        } else {</span>
+ 251 |     | <span class='unexecuted'>            uint256 sharesA = (amountA * pool.totalShares) / pool.tokenA;</span>
+ 252 |     | <span class='unexecuted'>            uint256 sharesB = (amountB * pool.totalShares) / pool.tokenB;</span>
+ 253 |     | <span class='unexecuted'>            sharesMinted = sharesA &lt; sharesB ? sharesA : sharesB;</span>
+ 254 |     | <span class='neutral'>        }</span>
+ 255 |     | <span class='neutral'>        </span>
+ 256 |     | <span class='unexecuted'>        pool.tokenA += amountA;</span>
+ 257 |     | <span class='unexecuted'>        pool.tokenB += amountB;</span>
+ 258 |     | <span class='unexecuted'>        pool.totalShares += sharesMinted;</span>
+ 259 |     | <span class='unexecuted'>        shares[msg.sender] += sharesMinted;</span>
+ 260 |     | <span class='neutral'>        </span>
+ 261 |     | <span class='unexecuted'>        lastPriceSnapshot[msg.sender] = getCurrentPrice();</span>
+ 262 |     | <span class='neutral'>    }</span>
+ 263 |     | <span class='neutral'>    </span>
+ 264 |     | <span class='unexecuted'>    function swap(uint256 amountIn, bool aToB) public {</span>
+ 265 |     | <span class='unexecuted'>        require(!emergencyStop, &quot;Emergency stop active&quot;);</span>
+ 266 |     | <span class='unexecuted'>        require(amountIn &gt; 0, &quot;Invalid amount&quot;);</span>
+ 267 |     | <span class='neutral'>        </span>
+ 268 |     | <span class='unexecuted'>        uint256 amountOut;</span>
+ 269 |     | <span class='unexecuted'>        uint256 feeAmount = (amountIn * pool.fee) / 10000;</span>
+ 270 |     | <span class='unexecuted'>        uint256 amountInAfterFee = amountIn - feeAmount;</span>
+ 271 |     | <span class='neutral'>        </span>
+ 272 |     | <span class='unexecuted'>        if (aToB) {</span>
+ 273 |     | <span class='unexecuted'>            amountOut = (pool.tokenB * amountInAfterFee) / (pool.tokenA + amountInAfterFee);</span>
+ 274 |     | <span class='unexecuted'>            require(amountOut &lt; pool.tokenB, &quot;Insufficient liquidity&quot;);</span>
+ 275 |     | <span class='neutral'>            </span>
+ 276 |     | <span class='unexecuted'>            pool.tokenA += amountIn;</span>
+ 277 |     | <span class='unexecuted'>            pool.tokenB -= amountOut;</span>
+ 278 |     | <span class='neutral'>        } else {</span>
+ 279 |     | <span class='unexecuted'>            amountOut = (pool.tokenA * amountInAfterFee) / (pool.tokenB + amountInAfterFee);</span>
+ 280 |     | <span class='unexecuted'>            require(amountOut &lt; pool.tokenA, &quot;Insufficient liquidity&quot;);</span>
+ 281 |     | <span class='neutral'>            </span>
+ 282 |     | <span class='unexecuted'>            pool.tokenB += amountIn;</span>
+ 283 |     | <span class='unexecuted'>            pool.tokenA -= amountOut;</span>
+ 284 |     | <span class='neutral'>        }</span>
+ 285 |     | <span class='neutral'>        </span>
+ 286 |     | <span class='neutral'>        // Price manipulation check (potential vulnerability area)</span>
+ 287 |     | <span class='unexecuted'>        uint256 newPrice = getCurrentPrice();</span>
+ 288 |     | <span class='unexecuted'>        uint256 priceChange = newPrice &gt; lastPriceSnapshot[msg.sender] ? </span>
+ 289 |     | <span class='unexecuted'>            newPrice - lastPriceSnapshot[msg.sender] : </span>
+ 290 |     | <span class='unexecuted'>            lastPriceSnapshot[msg.sender] - newPrice;</span>
+ 291 |     | <span class='neutral'>            </span>
+ 292 |     | <span class='unexecuted'>        require(priceChange &lt;= lastPriceSnapshot[msg.sender] / 10, &quot;Price manipulation detected&quot;);</span>
+ 293 |     | <span class='unexecuted'>        lastPriceSnapshot[msg.sender] = newPrice;</span>
+ 294 |     | <span class='neutral'>    }</span>
+ 295 |     | <span class='neutral'>    </span>
+ 296 |     | <span class='unexecuted'>    function getCurrentPrice() public view returns (uint256) {</span>
+ 297 |     | <span class='unexecuted'>        if (pool.tokenB == 0) return 0;</span>
+ 298 |     | <span class='unexecuted'>        return (pool.tokenA * 1e18) / pool.tokenB;</span>
+ 299 |     | <span class='neutral'>    }</span>
+ 300 |     | <span class='neutral'>    </span>
+ 301 |     | <span class='unexecuted'>    function sqrt(uint256 x) internal pure returns (uint256) {</span>
+ 302 |     | <span class='neutral'>        // Simplified square root implementation</span>
+ 303 |     | <span class='unexecuted'>        if (x == 0) return 0;</span>
+ 304 |     | <span class='unexecuted'>        uint256 z = (x + 1) / 2;</span>
+ 305 |     | <span class='unexecuted'>        uint256 y = x;</span>
+ 306 |     | <span class='unexecuted'>        while (z &lt; y) {</span>
+ 307 |     | <span class='unexecuted'>            y = z;</span>
+ 308 |     | <span class='unexecuted'>            z = (x / z + z) / 2;</span>
+ 309 |     | <span class='neutral'>        }</span>
+ 310 |     | <span class='unexecuted'>        return y;</span>
+ 311 |     | <span class='neutral'>    }</span>
+ 312 |     | <span class='neutral'>    </span>
+ 313 |     | <span class='neutral'>    // Properties to discover economic vulnerabilities</span>
+ 314 |     | <span class='unexecuted'>    function echidna_constant_product() public view returns (bool) {</span>
+ 315 |     | <span class='neutral'>        // K = x * y should generally increase or stay constant (due to fees)</span>
+ 316 |     | <span class='unexecuted'>        return pool.tokenA * pool.tokenB &gt;= MIN_LIQUIDITY * MIN_LIQUIDITY;</span>
+ 317 |     | <span class='neutral'>    }</span>
+ 318 |     | <span class='neutral'>    </span>
+ 319 |     | <span class='unexecuted'>    function echidna_no_arbitrary_minting() public view returns (bool) {</span>
+ 320 |     | <span class='neutral'>        // Shares should correspond to actual deposits</span>
+ 321 |     | <span class='unexecuted'>        return shares[msg.sender] &lt;= pool.totalShares;</span>
+ 322 |     | <span class='neutral'>    }</span>
+ 323 |     | <span class='neutral'>    </span>
+ 324 |     | <span class='unexecuted'>    function echidna_price_bounds() public view returns (bool) {</span>
+ 325 |     | <span class='unexecuted'>        uint256 price = getCurrentPrice();</span>
+ 326 |     | <span class='neutral'>        // Price should be within reasonable bounds</span>
+ 327 |     | <span class='unexecuted'>        return price &lt;= 1000000 * 1e18; // Prevent extreme prices</span>
+ 328 |     | <span class='neutral'>    }</span>
+ 329 |     | <span class='neutral'>    </span>
+ 330 |     | <span class='unexecuted'>    function echidna_liquidity_preservation() public view returns (bool) {</span>
+ 331 |     | <span class='neutral'>        // Pool should maintain minimum liquidity</span>
+ 332 |     | <span class='unexecuted'>        return pool.tokenA &gt; 0 &amp;&amp; pool.tokenB &gt; 0;</span>
+ 333 |     | <span class='neutral'>    }</span>
+ 334 |     | <span class='neutral'>}</span>
+ 335 |     | <span class='neutral'></span>
+ 336 |     | <span class='neutral'>// =============================================================================</span>
+ 337 |     | <span class='neutral'>// 5. METADATA MANIPULATION VULNERABILITIES</span>
+ 338 |     | <span class='neutral'>// =============================================================================</span>
+ 339 |     | <span class='neutral'></span>
+ 340 |     | <span class='unexecuted'>contract MetadataLab {</span>
+ 341 |     | <span class='neutral'>    struct Token {</span>
+ 342 |     | <span class='neutral'>        string name;</span>
+ 343 |     | <span class='neutral'>        string symbol;</span>
+ 344 |     | <span class='neutral'>        uint8 decimals;</span>
+ 345 |     | <span class='neutral'>        uint256 totalSupply;</span>
+ 346 |     | <span class='neutral'>        bool frozen;</span>
+ 347 |     | <span class='neutral'>        address controller;</span>
+ 348 |     | <span class='neutral'>    }</span>
+ 349 |     | <span class='neutral'>    </span>
+ 350 |     | <span class='unexecuted'>    mapping(uint256 =&gt; Token) public tokens;</span>
+ 351 |     | <span class='unexecuted'>    mapping(uint256 =&gt; mapping(address =&gt; uint256)) public balances;</span>
+ 352 |     | <span class='unexecuted'>    uint256 public nextTokenId;</span>
+ 353 |     | <span class='neutral'>    </span>
+ 354 |     | <span class='neutral'>    // Functions that manipulate metadata</span>
+ 355 |     | <span class='unexecuted'>    function createToken(</span>
+ 356 |     | <span class='neutral'>        string memory name,</span>
+ 357 |     | <span class='neutral'>        string memory symbol,</span>
+ 358 |     | <span class='neutral'>        uint8 decimals,</span>
+ 359 |     | <span class='neutral'>        uint256 totalSupply</span>
+ 360 |     | <span class='unexecuted'>    ) public returns (uint256) {</span>
+ 361 |     | <span class='unexecuted'>        uint256 tokenId = nextTokenId++;</span>
+ 362 |     | <span class='neutral'>        </span>
+ 363 |     | <span class='unexecuted'>        tokens[tokenId] = Token({</span>
+ 364 |     | <span class='unexecuted'>            name: name,</span>
+ 365 |     | <span class='unexecuted'>            symbol: symbol,</span>
+ 366 |     | <span class='unexecuted'>            decimals: decimals,</span>
+ 367 |     | <span class='unexecuted'>            totalSupply: totalSupply,</span>
+ 368 |     | <span class='unexecuted'>            frozen: false,</span>
+ 369 |     | <span class='unexecuted'>            controller: msg.sender</span>
+ 370 |     | <span class='neutral'>        });</span>
+ 371 |     | <span class='neutral'>        </span>
+ 372 |     | <span class='unexecuted'>        balances[tokenId][msg.sender] = totalSupply;</span>
+ 373 |     | <span class='unexecuted'>        return tokenId;</span>
+ 374 |     | <span class='neutral'>    }</span>
+ 375 |     | <span class='neutral'>    </span>
+ 376 |     | <span class='unexecuted'>    function updateMetadata(</span>
+ 377 |     | <span class='neutral'>        uint256 tokenId,</span>
+ 378 |     | <span class='neutral'>        string memory newName,</span>
+ 379 |     | <span class='neutral'>        string memory newSymbol</span>
+ 380 |     | <span class='neutral'>    ) public {</span>
+ 381 |     | <span class='unexecuted'>        require(tokens[tokenId].controller == msg.sender, &quot;Not controller&quot;);</span>
+ 382 |     | <span class='unexecuted'>        require(!tokens[tokenId].frozen, &quot;Token frozen&quot;);</span>
+ 383 |     | <span class='neutral'>        </span>
+ 384 |     | <span class='unexecuted'>        tokens[tokenId].name = newName;</span>
+ 385 |     | <span class='unexecuted'>        tokens[tokenId].symbol = newSymbol;</span>
+ 386 |     | <span class='neutral'>    }</span>
+ 387 |     | <span class='neutral'>    </span>
+ 388 |     | <span class='unexecuted'>    function transfer(uint256 tokenId, address to, uint256 amount) public {</span>
+ 389 |     | <span class='unexecuted'>        require(!tokens[tokenId].frozen, &quot;Token frozen&quot;);</span>
+ 390 |     | <span class='unexecuted'>        require(balances[tokenId][msg.sender] &gt;= amount, &quot;Insufficient balance&quot;);</span>
+ 391 |     | <span class='neutral'>        </span>
+ 392 |     | <span class='unexecuted'>        balances[tokenId][msg.sender] -= amount;</span>
+ 393 |     | <span class='unexecuted'>        balances[tokenId][to] += amount;</span>
+ 394 |     | <span class='neutral'>    }</span>
+ 395 |     | <span class='neutral'>    </span>
+ 396 |     | <span class='neutral'>    // Properties to discover metadata vulnerabilities</span>
+ 397 |     | <span class='unexecuted'>    function echidna_metadata_consistency() public view returns (bool) {</span>
+ 398 |     | <span class='neutral'>        // Token metadata should remain consistent with economic properties</span>
+ 399 |     | <span class='unexecuted'>        return bytes(tokens[0].name).length &lt;= 50; // Reasonable name length</span>
+ 400 |     | <span class='neutral'>    }</span>
+ 401 |     | <span class='neutral'>    </span>
+ 402 |     | <span class='unexecuted'>    function echidna_controller_privileges() public view returns (bool) {</span>
+ 403 |     | <span class='neutral'>        // Controller shouldn&#39;t have unlimited power</span>
+ 404 |     | <span class='unexecuted'>        return !tokens[0].frozen || tokens[0].controller != address(0);</span>
+ 405 |     | <span class='neutral'>    }</span>
+ 406 |     | <span class='neutral'>    </span>
+ 407 |     | <span class='unexecuted'>    function echidna_balance_metadata_sync() public view returns (bool) {</span>
+ 408 |     | <span class='neutral'>        // Balances should respect token properties</span>
+ 409 |     | <span class='unexecuted'>        return balances[0][msg.sender] &lt;= tokens[0].totalSupply;</span>
+ 410 |     | <span class='neutral'>    }</span>
+ 411 |     | <span class='neutral'>}</span>
+ 412 |     | <span class='neutral'></span>
+
+</code>
+<br />
+

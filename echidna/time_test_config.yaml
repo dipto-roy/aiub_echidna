@@ -1,0 +1,17 @@
+testMode: "property"
+testLimit: 10000
+seqLen: 50
+shrinkLimit: 5000
+coverage: true
+estimateGas: true
+corpusDir: "./time-tests"
+coverageFormats: ["txt", "html", "lcov"]
+
+# Time-specific testing configurations
+workers: 4
+dictFreq: 0.4
+maxTimeDelay: 100000  # Maximum time delay between blocks
+maxBlockDelay: 60480  # Maximum block delay (about 1 week in blocks)
+
+# Enable detailed logging for time-based testing
+format: "text"

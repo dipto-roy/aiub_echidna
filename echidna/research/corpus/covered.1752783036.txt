@@ -1,0 +1,414 @@
+/home/dip-roy/Echidna_2.2.6/echidna/research/vulnerability_discovery.sol
+   1 |     | // SPDX-License-Identifier: MIT
+   2 |     | pragma solidity ^0.8.0;
+   3 |     | 
+   4 |     | /**
+   5 |     |  * @title Novel Vulnerability Discovery Lab
+   6 |     |  * @dev Framework for discovering new vulnerability classes through systematic fuzzing
+   7 |     |  */
+   8 |     | 
+   9 |     | // =============================================================================
+  10 |     | // 1. STATE CORRUPTION VULNERABILITIES
+  11 |     | // =============================================================================
+  12 |     | 
+  13 |     | contract StateCorruptionLab {
+  14 |     |     mapping(address => uint256) public balances;
+  15 |     |     mapping(address => mapping(address => uint256)) public allowances;
+  16 |     |     uint256 public totalSupply;
+  17 |     |     uint256 private lockedAmount;
+  18 |     |     bool private locked;
+  19 |     |     uint256 public lastOperation;
+  20 |     |     
+  21 |     |     // Novel pattern: State inconsistency through complex operations
+  22 |     |     function complexTransfer(address from, address to, uint256 amount, bool useAllowance) public {
+  23 |     |         if (useAllowance) {
+  24 |     |             require(allowances[from][msg.sender] >= amount, "Insufficient allowance");
+  25 |     |             allowances[from][msg.sender] -= amount;
+  26 |     |         } else {
+  27 |     |             require(msg.sender == from, "Unauthorized");
+  28 |     |         }
+  29 |     |         
+  30 |     |         require(balances[from] >= amount, "Insufficient balance");
+  31 |     |         
+  32 |     |         // Potential vulnerability: State update ordering
+  33 |     |         balances[from] -= amount;
+  34 |     |         lastOperation = block.timestamp;
+  35 |     |         balances[to] += amount;
+  36 |     |         
+  37 |     |         // Complex condition that might create edge cases
+  38 |     |         if (amount > totalSupply / 100 && !locked) {
+  39 |     |             lockedAmount += amount / 10;
+  40 |     |         }
+  41 |     |     }
+  42 |     |     
+  43 |     |     // Echidna properties to discover state corruption
+  44 |     |     function echidna_total_balance_conservation() public view returns (bool) {
+  45 |     |         // This should always hold, failures indicate novel state corruption
+  46 |     |         uint256 sumBalances = 0;
+  47 |     |         // Note: In real implementation, we'd need to track all addresses
+  48 |     |         return true; // Simplified for research framework
+  49 |     |     }
+  50 |     |     
+  51 |     |     function echidna_allowance_consistency() public view returns (bool) {
+  52 |     |         // Check for negative allowances or overflow conditions
+  53 |     |         return allowances[msg.sender][address(this)] <= type(uint256).max;
+  54 |     |     }
+  55 |     |     
+  56 |     |     function echidna_locked_amount_bounds() public view returns (bool) {
+  57 |     |         return lockedAmount <= totalSupply;
+  58 |     |     }
+  59 |     | }
+  60 |     | 
+  61 |     | // =============================================================================
+  62 |     | // 2. TEMPORAL LOGIC VULNERABILITIES
+  63 |     | // =============================================================================
+  64 |     | 
+  65 |     | contract TemporalLogicLab {
+  66 |     |     struct TimedAction {
+  67 |     |         uint256 timestamp;
+  68 |     |         address user;
+  69 |     |         uint256 amount;
+  70 |     |         bool executed;
+  71 |     |     }
+  72 |     |     
+  73 |     |     mapping(uint256 => TimedAction) public timedActions;
+  74 |     |     mapping(address => uint256) public userLastAction;
+  75 |     |     uint256 public nextActionId;
+  76 |     |     uint256 public constant COOLDOWN = 1 hours;
+  77 |     |     uint256 public constant EXECUTION_WINDOW = 30 minutes;
+  78 |     |     
+  79 |     |     // Novel pattern: Complex temporal dependencies
+  80 |     |     function scheduleAction(uint256 amount, uint256 delay) public {
+  81 |     |         require(delay >= COOLDOWN, "Delay too short");
+  82 |     |         require(block.timestamp >= userLastAction[msg.sender] + COOLDOWN, "User cooldown");
+  83 |     |         
+  84 |     |         uint256 actionId = nextActionId++;
+  85 |     |         timedActions[actionId] = TimedAction({
+  86 |     |             timestamp: block.timestamp + delay,
+  87 |     |             user: msg.sender,
+  88 |     |             amount: amount,
+  89 |     |             executed: false
+  90 |     |         });
+  91 |     |         
+  92 |     |         userLastAction[msg.sender] = block.timestamp;
+  93 |     |     }
+  94 |     |     
+  95 |     |     function executeAction(uint256 actionId) public {
+  96 |     |         TimedAction storage action = timedActions[actionId];
+  97 |     |         require(action.user == msg.sender, "Not your action");
+  98 |     |         require(!action.executed, "Already executed");
+  99 |     |         require(block.timestamp >= action.timestamp, "Too early");
+ 100 |     |         require(block.timestamp <= action.timestamp + EXECUTION_WINDOW, "Too late");
+ 101 |     |         
+ 102 |     |         action.executed = true;
+ 103 |     |         // Process action...
+ 104 |     |     }
+ 105 |     |     
+ 106 |     |     // Properties to discover temporal vulnerabilities
+ 107 |     |     function echidna_no_time_travel() public view returns (bool) {
+ 108 |     |         return block.timestamp >= userLastAction[msg.sender];
+ 109 |     |     }
+ 110 |     |     
+ 111 |     |     function echidna_execution_window_respected() public view returns (bool) {
+ 112 |     |         // Check that no executed action violates timing constraints
+ 113 |     |         return true; // Simplified - would check all actions in real implementation
+ 114 |     |     }
+ 115 |     |     
+ 116 |     |     function echidna_cooldown_enforced() public view returns (bool) {
+ 117 |     |         // Verify cooldown periods are properly enforced
+ 118 |     |         return userLastAction[msg.sender] <= block.timestamp;
+ 119 |     |     }
+ 120 |     | }
+ 121 |     | 
+ 122 |     | // =============================================================================
+ 123 |     | // 3. CROSS-FUNCTIONAL INTERACTION VULNERABILITIES
+ 124 |     | // =============================================================================
+ 125 |     | 
+ 126 |     | contract CrossFunctionalLab {
+ 127 |     |     enum Mode { NORMAL, EMERGENCY, MAINTENANCE }
+ 128 |     |     Mode public currentMode;
+ 129 |     |     
+ 130 |     |     mapping(address => uint256) public stakes;
+ 131 |     |     mapping(address => uint256) public rewards;
+ 132 |     |     mapping(address => bool) public isValidator;
+ 133 |     |     
+ 134 |     |     uint256 public totalStaked;
+ 135 |     |     uint256 public rewardPool;
+ 136 |     |     address public admin;
+ 137 |     |     
+ 138 |     |     modifier onlyMode(Mode requiredMode) {
+ 139 |     |         require(currentMode == requiredMode, "Wrong mode");
+ 140 |     |         _;
+ 141 |     |     }
+ 142 |     |     
+ 143 |     |     modifier onlyAdmin() {
+ 144 |     |         require(msg.sender == admin, "Not admin");
+ 145 |     |         _;
+ 146 |     |     }
+ 147 |     |     
+ 148 |     |     constructor() {
+ 149 |     |         admin = msg.sender;
+ 150 |     |         currentMode = Mode.NORMAL;
+ 151 |     |     }
+ 152 |     |     
+ 153 |     |     // Function interactions that might create vulnerabilities
+ 154 |     |     function stake(uint256 amount) public onlyMode(Mode.NORMAL) {
+ 155 |     |         stakes[msg.sender] += amount;
+ 156 |     |         totalStaked += amount;
+ 157 |     |         
+ 158 |     |         if (stakes[msg.sender] >= 1000 ether) {
+ 159 |     |             isValidator[msg.sender] = true;
+ 160 |     |         }
+ 161 |     |     }
+ 162 |     |     
+ 163 |     |     function unstake(uint256 amount) public {
+ 164 |     |         require(stakes[msg.sender] >= amount, "Insufficient stake");
+ 165 |     |         
+ 166 |     |         stakes[msg.sender] -= amount;
+ 167 |     |         totalStaked -= amount;
+ 168 |     |         
+ 169 |     |         if (stakes[msg.sender] < 1000 ether) {
+ 170 |     |             isValidator[msg.sender] = false;
+ 171 |     |         }
+ 172 |     |     }
+ 173 |     |     
+ 174 |     |     function distributeRewards() public onlyMode(Mode.NORMAL) {
+ 175 |     |         require(isValidator[msg.sender], "Not validator");
+ 176 |     |         
+ 177 |     |         uint256 reward = rewardPool / getValidatorCount();
+ 178 |     |         rewards[msg.sender] += reward;
+ 179 |     |         rewardPool -= reward;
+ 180 |     |     }
+ 181 |     |     
+ 182 |     |     function switchMode(Mode newMode) public onlyAdmin {
+ 183 |     |         currentMode = newMode;
+ 184 |     |         
+ 185 |     |         // Mode-specific logic that might create vulnerabilities
+ 186 |     |         if (newMode == Mode.EMERGENCY) {
+ 187 |     |             // Emergency logic
+ 188 |     |             rewardPool = 0; // Potential vulnerability: Reward loss
+ 189 |     |         }
+ 190 |     |     }
+ 191 |     |     
+ 192 |     |     function getValidatorCount() public view returns (uint256) {
+ 193 |     |         // Simplified - would count all validators in real implementation
+ 194 |     |         return isValidator[msg.sender] ? 1 : 0;
+ 195 |     |     }
+ 196 |     |     
+ 197 |     |     // Properties to discover cross-functional vulnerabilities
+ 198 |     |     function echidna_stake_consistency() public view returns (bool) {
+ 199 |     |         return stakes[msg.sender] <= totalStaked;
+ 200 |     |     }
+ 201 |     |     
+ 202 |     |     function echidna_validator_status_consistency() public view returns (bool) {
+ 203 |     |         if (stakes[msg.sender] >= 1000 ether) {
+ 204 |     |             return isValidator[msg.sender];
+ 205 |     |         }
+ 206 |     |         return true;
+ 207 |     |     }
+ 208 |     |     
+ 209 |     |     function echidna_mode_safety() public view returns (bool) {
+ 210 |     |         // Emergency mode shouldn't break core invariants
+ 211 |     |         return totalStaked >= stakes[msg.sender];
+ 212 |     |     }
+ 213 |     |     
+ 214 |     |     function echidna_reward_conservation() public view returns (bool) {
+ 215 |     |         // Rewards should not exceed pool unless in specific conditions
+ 216 |     |         return rewards[msg.sender] <= 1000000 ether; // Reasonable upper bound
+ 217 |     |     }
+ 218 |     | }
+ 219 |     | 
+ 220 |     | // =============================================================================
+ 221 |     | // 4. ECONOMIC LOGIC VULNERABILITIES
+ 222 |     | // =============================================================================
+ 223 |     | 
+ 224 | *r  | contract EconomicLogicLab {
+ 225 |     |     struct Pool {
+ 226 |     |         uint256 tokenA;
+ 227 |     |         uint256 tokenB;
+ 228 |     |         uint256 totalShares;
+ 229 |     |         uint256 fee; // Basis points (e.g., 30 = 0.3%)
+ 230 |     |     }
+ 231 |     |     
+ 232 |     |     Pool public pool;
+ 233 | *   |     mapping(address => uint256) public shares;
+ 234 |     |     mapping(address => uint256) public lastPriceSnapshot;
+ 235 |     |     
+ 236 | *   |     uint256 public constant MIN_LIQUIDITY = 1000;
+ 237 |     |     uint256 public priceOracle;
+ 238 |     |     bool public emergencyStop;
+ 239 |     |     
+ 240 |     |     // Complex economic interactions
+ 241 | *   |     function addLiquidity(uint256 amountA, uint256 amountB) public {
+ 242 | *   |         require(!emergencyStop, "Emergency stop active");
+ 243 | *r  |         require(amountA > 0 && amountB > 0, "Invalid amounts");
+ 244 |     |         
+ 245 | *   |         uint256 sharesMinted;
+ 246 |     |         
+ 247 | *   |         if (pool.totalShares == 0) {
+ 248 | *   |             sharesMinted = sqrt(amountA * amountB);
+ 249 | *r  |             require(sharesMinted >= MIN_LIQUIDITY, "Insufficient liquidity");
+ 250 | *   |         } else {
+ 251 | *   |             uint256 sharesA = (amountA * pool.totalShares) / pool.tokenA;
+ 252 | *   |             uint256 sharesB = (amountB * pool.totalShares) / pool.tokenB;
+ 253 | *   |             sharesMinted = sharesA < sharesB ? sharesA : sharesB;
+ 254 |     |         }
+ 255 |     |         
+ 256 | *   |         pool.tokenA += amountA;
+ 257 | *   |         pool.tokenB += amountB;
+ 258 | *   |         pool.totalShares += sharesMinted;
+ 259 | *   |         shares[msg.sender] += sharesMinted;
+ 260 |     |         
+ 261 | *   |         lastPriceSnapshot[msg.sender] = getCurrentPrice();
+ 262 |     |     }
+ 263 |     |     
+ 264 | *   |     function swap(uint256 amountIn, bool aToB) public {
+ 265 | *   |         require(!emergencyStop, "Emergency stop active");
+ 266 | *r  |         require(amountIn > 0, "Invalid amount");
+ 267 |     |         
+ 268 | *   |         uint256 amountOut;
+ 269 | *   |         uint256 feeAmount = (amountIn * pool.fee) / 10000;
+ 270 | *   |         uint256 amountInAfterFee = amountIn - feeAmount;
+ 271 |     |         
+ 272 | *   |         if (aToB) {
+ 273 | *   |             amountOut = (pool.tokenB * amountInAfterFee) / (pool.tokenA + amountInAfterFee);
+ 274 | *r  |             require(amountOut < pool.tokenB, "Insufficient liquidity");
+ 275 |     |             
+ 276 | *   |             pool.tokenA += amountIn;
+ 277 | *   |             pool.tokenB -= amountOut;
+ 278 |     |         } else {
+ 279 | *   |             amountOut = (pool.tokenA * amountInAfterFee) / (pool.tokenB + amountInAfterFee);
+ 280 | *r  |             require(amountOut < pool.tokenA, "Insufficient liquidity");
+ 281 |     |             
+ 282 | *   |             pool.tokenB += amountIn;
+ 283 | *   |             pool.tokenA -= amountOut;
+ 284 |     |         }
+ 285 |     |         
+ 286 |     |         // Price manipulation check (potential vulnerability area)
+ 287 | *   |         uint256 newPrice = getCurrentPrice();
+ 288 | *   |         uint256 priceChange = newPrice > lastPriceSnapshot[msg.sender] ? 
+ 289 | *   |             newPrice - lastPriceSnapshot[msg.sender] : 
+ 290 | *   |             lastPriceSnapshot[msg.sender] - newPrice;
+ 291 |     |             
+ 292 | *r  |         require(priceChange <= lastPriceSnapshot[msg.sender] / 10, "Price manipulation detected");
+ 293 | *   |         lastPriceSnapshot[msg.sender] = newPrice;
+ 294 |     |     }
+ 295 |     |     
+ 296 | *   |     function getCurrentPrice() public view returns (uint256) {
+ 297 | *   |         if (pool.tokenB == 0) return 0;
+ 298 | *   |         return (pool.tokenA * 1e18) / pool.tokenB;
+ 299 |     |     }
+ 300 |     |     
+ 301 | *   |     function sqrt(uint256 x) internal pure returns (uint256) {
+ 302 |     |         // Simplified square root implementation
+ 303 | *   |         if (x == 0) return 0;
+ 304 | *   |         uint256 z = (x + 1) / 2;
+ 305 | *   |         uint256 y = x;
+ 306 | *   |         while (z < y) {
+ 307 | *   |             y = z;
+ 308 | *   |             z = (x / z + z) / 2;
+ 309 |     |         }
+ 310 | *   |         return y;
+ 311 |     |     }
+ 312 |     |     
+ 313 |     |     // Properties to discover economic vulnerabilities
+ 314 |     |     function echidna_constant_product() public view returns (bool) {
+ 315 |     |         // K = x * y should generally increase or stay constant (due to fees)
+ 316 |     |         return pool.tokenA * pool.tokenB >= MIN_LIQUIDITY * MIN_LIQUIDITY;
+ 317 |     |     }
+ 318 |     |     
+ 319 |     |     function echidna_no_arbitrary_minting() public view returns (bool) {
+ 320 |     |         // Shares should correspond to actual deposits
+ 321 |     |         return shares[msg.sender] <= pool.totalShares;
+ 322 |     |     }
+ 323 |     |     
+ 324 |     |     function echidna_price_bounds() public view returns (bool) {
+ 325 |     |         uint256 price = getCurrentPrice();
+ 326 |     |         // Price should be within reasonable bounds
+ 327 |     |         return price <= 1000000 * 1e18; // Prevent extreme prices
+ 328 |     |     }
+ 329 |     |     
+ 330 |     |     function echidna_liquidity_preservation() public view returns (bool) {
+ 331 |     |         // Pool should maintain minimum liquidity
+ 332 |     |         return pool.tokenA > 0 && pool.tokenB > 0;
+ 333 |     |     }
+ 334 |     | }
+ 335 |     | 
+ 336 |     | // =============================================================================
+ 337 |     | // 5. METADATA MANIPULATION VULNERABILITIES
+ 338 |     | // =============================================================================
+ 339 |     | 
+ 340 |     | contract MetadataLab {
+ 341 |     |     struct Token {
+ 342 |     |         string name;
+ 343 |     |         string symbol;
+ 344 |     |         uint8 decimals;
+ 345 |     |         uint256 totalSupply;
+ 346 |     |         bool frozen;
+ 347 |     |         address controller;
+ 348 |     |     }
+ 349 |     |     
+ 350 |     |     mapping(uint256 => Token) public tokens;
+ 351 |     |     mapping(uint256 => mapping(address => uint256)) public balances;
+ 352 |     |     uint256 public nextTokenId;
+ 353 |     |     
+ 354 |     |     // Functions that manipulate metadata
+ 355 |     |     function createToken(
+ 356 |     |         string memory name,
+ 357 |     |         string memory symbol,
+ 358 |     |         uint8 decimals,
+ 359 |     |         uint256 totalSupply
+ 360 |     |     ) public returns (uint256) {
+ 361 |     |         uint256 tokenId = nextTokenId++;
+ 362 |     |         
+ 363 |     |         tokens[tokenId] = Token({
+ 364 |     |             name: name,
+ 365 |     |             symbol: symbol,
+ 366 |     |             decimals: decimals,
+ 367 |     |             totalSupply: totalSupply,
+ 368 |     |             frozen: false,
+ 369 |     |             controller: msg.sender
+ 370 |     |         });
+ 371 |     |         
+ 372 |     |         balances[tokenId][msg.sender] = totalSupply;
+ 373 |     |         return tokenId;
+ 374 |     |     }
+ 375 |     |     
+ 376 |     |     function updateMetadata(
+ 377 |     |         uint256 tokenId,
+ 378 |     |         string memory newName,
+ 379 |     |         string memory newSymbol
+ 380 |     |     ) public {
+ 381 |     |         require(tokens[tokenId].controller == msg.sender, "Not controller");
+ 382 |     |         require(!tokens[tokenId].frozen, "Token frozen");
+ 383 |     |         
+ 384 |     |         tokens[tokenId].name = newName;
+ 385 |     |         tokens[tokenId].symbol = newSymbol;
+ 386 |     |     }
+ 387 |     |     
+ 388 |     |     function transfer(uint256 tokenId, address to, uint256 amount) public {
+ 389 |     |         require(!tokens[tokenId].frozen, "Token frozen");
+ 390 |     |         require(balances[tokenId][msg.sender] >= amount, "Insufficient balance");
+ 391 |     |         
+ 392 |     |         balances[tokenId][msg.sender] -= amount;
+ 393 |     |         balances[tokenId][to] += amount;
+ 394 |     |     }
+ 395 |     |     
+ 396 |     |     // Properties to discover metadata vulnerabilities
+ 397 |     |     function echidna_metadata_consistency() public view returns (bool) {
+ 398 |     |         // Token metadata should remain consistent with economic properties
+ 399 |     |         return bytes(tokens[0].name).length <= 50; // Reasonable name length
+ 400 |     |     }
+ 401 |     |     
+ 402 |     |     function echidna_controller_privileges() public view returns (bool) {
+ 403 |     |         // Controller shouldn't have unlimited power
+ 404 |     |         return !tokens[0].frozen || tokens[0].controller != address(0);
+ 405 |     |     }
+ 406 |     |     
+ 407 |     |     function echidna_balance_metadata_sync() public view returns (bool) {
+ 408 |     |         // Balances should respect token properties
+ 409 |     |         return balances[0][msg.sender] <= tokens[0].totalSupply;
+ 410 |     |     }
+ 411 |     | }
+ 412 |     | 
+

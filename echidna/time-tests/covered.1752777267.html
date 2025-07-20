@@ -1,0 +1,252 @@
+<style> code { white-space: pre-wrap; display: block; background-color: #eee; }.executed { background-color: #afa; }.reverted { background-color: #ffa; }.unexecuted { background-color: #faa; }.neutral { background-color: #eee; }</style><b>/home/dip-roy/Echidna_2.2.6/echidna/time_test_contract.sol</b>
+<code>
+   1 |     | <span class='neutral'>// SPDX-License-Identifier: MIT</span>
+   2 |     | <span class='neutral'>pragma solidity ^0.8.0;</span>
+   3 |     | <span class='neutral'></span>
+   4 | *r  | <span class='executed'>contract TimeTestContract {</span>
+   5 |     | <span class='neutral'>    // State variables to track times</span>
+   6 | *   | <span class='executed'>    uint256 public deploymentTime;</span>
+   7 |     | <span class='unexecuted'>    uint256 public lastCallTime;</span>
+   8 |     | <span class='unexecuted'>    uint256 public totalTimeDifference;</span>
+   9 |     | <span class='unexecuted'>    uint256 public callCount;</span>
+  10 |     | <span class='neutral'>    </span>
+  11 |     | <span class='neutral'>    // Events to log time information</span>
+  12 |     | <span class='neutral'>    event TimeRecorded(uint256 blockTimestamp, uint256 testTime, uint256 difference);</span>
+  13 |     | <span class='neutral'>    event TimeDifferenceCalculated(uint256 systemTime, uint256 testTime, uint256 diff);</span>
+  14 |     | <span class='neutral'>    </span>
+  15 | *   | <span class='executed'>    constructor() {</span>
+  16 | *   | <span class='executed'>        deploymentTime = block.timestamp;</span>
+  17 | *   | <span class='executed'>        lastCallTime = block.timestamp;</span>
+  18 | *   | <span class='executed'>        callCount = 0;</span>
+  19 |     | <span class='neutral'>    }</span>
+  20 |     | <span class='neutral'>    </span>
+  21 |     | <span class='neutral'>    // Function to get current system time (block.timestamp)</span>
+  22 |     | <span class='unexecuted'>    function getSystemTime() public view returns (uint256) {</span>
+  23 |     | <span class='unexecuted'>        return block.timestamp;</span>
+  24 |     | <span class='neutral'>    }</span>
+  25 |     | <span class='neutral'>    </span>
+  26 |     | <span class='neutral'>    // Function to simulate test time (using block.number as proxy)</span>
+  27 | *   | <span class='executed'>    function getTestTime() public view returns (uint256) {</span>
+  28 |     | <span class='neutral'>        // Using block.number * 15 to simulate approximate seconds (15 sec per block average)</span>
+  29 | *   | <span class='executed'>        return block.number * 15;</span>
+  30 |     | <span class='neutral'>    }</span>
+  31 |     | <span class='neutral'>    </span>
+  32 |     | <span class='neutral'>    // Function to get current block number</span>
+  33 |     | <span class='unexecuted'>    function getCurrentBlock() public view returns (uint256) {</span>
+  34 |     | <span class='unexecuted'>        return block.number;</span>
+  35 |     | <span class='neutral'>    }</span>
+  36 |     | <span class='neutral'>    </span>
+  37 |     | <span class='neutral'>    // Function to calculate and record time difference</span>
+  38 | *   | <span class='executed'>    function recordTimeDifference() public {</span>
+  39 | *   | <span class='executed'>        uint256 systemTime = block.timestamp;</span>
+  40 | *   | <span class='executed'>        uint256 testTime = getTestTime();</span>
+  41 | *   | <span class='executed'>        uint256 difference;</span>
+  42 |     | <span class='neutral'>        </span>
+  43 | *   | <span class='executed'>        if (systemTime &gt; testTime) {</span>
+  44 | *   | <span class='executed'>            difference = systemTime - testTime;</span>
+  45 |     | <span class='neutral'>        } else {</span>
+  46 |     | <span class='unexecuted'>            difference = testTime - systemTime;</span>
+  47 |     | <span class='neutral'>        }</span>
+  48 |     | <span class='neutral'>        </span>
+  49 | *   | <span class='executed'>        totalTimeDifference += difference;</span>
+  50 | *   | <span class='executed'>        callCount++;</span>
+  51 | *   | <span class='executed'>        lastCallTime = systemTime;</span>
+  52 |     | <span class='neutral'>        </span>
+  53 | *   | <span class='executed'>        emit TimeRecorded(systemTime, testTime, difference);</span>
+  54 |     | <span class='neutral'>    }</span>
+  55 |     | <span class='neutral'>    </span>
+  56 |     | <span class='neutral'>    // Function to get time elapsed since deployment</span>
+  57 | *   | <span class='executed'>    function getTimeSinceDeployment() public view returns (uint256) {</span>
+  58 | *   | <span class='executed'>        return block.timestamp - deploymentTime;</span>
+  59 |     | <span class='neutral'>    }</span>
+  60 |     | <span class='neutral'>    </span>
+  61 |     | <span class='neutral'>    // Function to get time elapsed since last call</span>
+  62 | *   | <span class='executed'>    function getTimeSinceLastCall() public view returns (uint256) {</span>
+  63 | *   | <span class='executed'>        return block.timestamp - lastCallTime;</span>
+  64 |     | <span class='neutral'>    }</span>
+  65 |     | <span class='neutral'>    </span>
+  66 |     | <span class='neutral'>    // Function to get average time difference</span>
+  67 |     | <span class='unexecuted'>    function getAverageTimeDifference() public view returns (uint256) {</span>
+  68 |     | <span class='unexecuted'>        if (callCount == 0) return 0;</span>
+  69 |     | <span class='unexecuted'>        return totalTimeDifference / callCount;</span>
+  70 |     | <span class='neutral'>    }</span>
+  71 |     | <span class='neutral'>    </span>
+  72 |     | <span class='neutral'>    // Function to advance time artificially (for testing)</span>
+  73 | *   | <span class='executed'>    function advanceTime(uint256 seconds_) public {</span>
+  74 |     | <span class='neutral'>        // This would typically be done with vm.warp in testing</span>
+  75 |     | <span class='neutral'>        // Here we just record the call</span>
+  76 | *   | <span class='executed'>        emit TimeDifferenceCalculated(block.timestamp, block.timestamp + seconds_, seconds_);</span>
+  77 |     | <span class='neutral'>    }</span>
+  78 |     | <span class='neutral'>    </span>
+  79 |     | <span class='neutral'>    // Function to simulate time-dependent logic</span>
+  80 |     | <span class='unexecuted'>    function timeBasedFunction(uint256 targetTime) public view returns (bool) {</span>
+  81 |     | <span class='unexecuted'>        return block.timestamp &gt;= targetTime;</span>
+  82 |     | <span class='neutral'>    }</span>
+  83 |     | <span class='neutral'>    </span>
+  84 |     | <span class='neutral'>    // Function to check if enough time has passed for an action</span>
+  85 |     | <span class='unexecuted'>    function canPerformAction(uint256 cooldownPeriod) public view returns (bool) {</span>
+  86 |     | <span class='unexecuted'>        return (block.timestamp - lastCallTime) &gt;= cooldownPeriod;</span>
+  87 |     | <span class='neutral'>    }</span>
+  88 |     | <span class='neutral'>    </span>
+  89 |     | <span class='neutral'>    // Echidna properties for testing</span>
+  90 |     | <span class='unexecuted'>    function echidna_time_never_decreases() public view returns (bool) {</span>
+  91 |     | <span class='unexecuted'>        return block.timestamp &gt;= deploymentTime;</span>
+  92 |     | <span class='neutral'>    }</span>
+  93 |     | <span class='neutral'>    </span>
+  94 |     | <span class='unexecuted'>    function echidna_time_difference_reasonable() public view returns (bool) {</span>
+  95 |     | <span class='unexecuted'>        uint256 systemTime = block.timestamp;</span>
+  96 |     | <span class='unexecuted'>        uint256 testTime = getTestTime();</span>
+  97 |     | <span class='unexecuted'>        uint256 difference;</span>
+  98 |     | <span class='neutral'>        </span>
+  99 |     | <span class='unexecuted'>        if (systemTime &gt; testTime) {</span>
+ 100 |     | <span class='unexecuted'>            difference = systemTime - testTime;</span>
+ 101 |     | <span class='neutral'>        } else {</span>
+ 102 |     | <span class='unexecuted'>            difference = testTime - systemTime;</span>
+ 103 |     | <span class='neutral'>        }</span>
+ 104 |     | <span class='neutral'>        </span>
+ 105 |     | <span class='neutral'>        // Difference should be reasonable (less than 1 year in seconds)</span>
+ 106 |     | <span class='unexecuted'>        return difference &lt; 365 days;</span>
+ 107 |     | <span class='neutral'>    }</span>
+ 108 |     | <span class='neutral'>    </span>
+ 109 |     | <span class='unexecuted'>    function echidna_call_count_increases() public view returns (bool) {</span>
+ 110 |     | <span class='unexecuted'>        return callCount &gt;= 0; // Always true, but tests state consistency</span>
+ 111 |     | <span class='neutral'>    }</span>
+ 112 |     | <span class='neutral'>    </span>
+ 113 |     | <span class='unexecuted'>    function echidna_last_call_time_valid() public view returns (bool) {</span>
+ 114 |     | <span class='unexecuted'>        return lastCallTime &gt;= deploymentTime &amp;&amp; lastCallTime &lt;= block.timestamp;</span>
+ 115 |     | <span class='neutral'>    }</span>
+ 116 |     | <span class='neutral'>    </span>
+ 117 |     | <span class='neutral'>    // Function to test time manipulation resistance</span>
+ 118 |     | <span class='unexecuted'>    function echidna_no_time_manipulation() public view returns (bool) {</span>
+ 119 |     | <span class='neutral'>        // Check that time flows forward consistently</span>
+ 120 |     | <span class='unexecuted'>        return block.timestamp &gt;= lastCallTime;</span>
+ 121 |     | <span class='neutral'>    }</span>
+ 122 |     | <span class='neutral'>}</span>
+ 123 |     | <span class='neutral'></span>
+ 124 |     | <span class='neutral'>// Contract for more advanced time testing</span>
+ 125 |     | <span class='unexecuted'>contract AdvancedTimeTest {</span>
+ 126 |     | <span class='unexecuted'>    uint256 public startTime;</span>
+ 127 |     | <span class='unexecuted'>    uint256 public endTime;</span>
+ 128 |     | <span class='unexecuted'>    uint256[] public timeSnapshots;</span>
+ 129 |     | <span class='unexecuted'>    mapping(uint256 =&gt; uint256) public timeAtBlock;</span>
+ 130 |     | <span class='neutral'>    </span>
+ 131 |     | <span class='unexecuted'>    constructor() {</span>
+ 132 |     | <span class='unexecuted'>        startTime = block.timestamp;</span>
+ 133 |     | <span class='unexecuted'>        timeSnapshots.push(block.timestamp);</span>
+ 134 |     | <span class='unexecuted'>        timeAtBlock[block.number] = block.timestamp;</span>
+ 135 |     | <span class='neutral'>    }</span>
+ 136 |     | <span class='neutral'>    </span>
+ 137 |     | <span class='neutral'>    // Function to take a time snapshot</span>
+ 138 |     | <span class='unexecuted'>    function takeSnapshot() public {</span>
+ 139 |     | <span class='unexecuted'>        timeSnapshots.push(block.timestamp);</span>
+ 140 |     | <span class='unexecuted'>        timeAtBlock[block.number] = block.timestamp;</span>
+ 141 |     | <span class='neutral'>    }</span>
+ 142 |     | <span class='neutral'>    </span>
+ 143 |     | <span class='neutral'>    // Function to get time progression</span>
+ 144 |     | <span class='unexecuted'>    function getTimeProgression() public view returns (uint256[] memory) {</span>
+ 145 |     | <span class='unexecuted'>        return timeSnapshots;</span>
+ 146 |     | <span class='neutral'>    }</span>
+ 147 |     | <span class='neutral'>    </span>
+ 148 |     | <span class='neutral'>    // Function to check if time is moving forward</span>
+ 149 |     | <span class='unexecuted'>    function isTimeProgressing() public view returns (bool) {</span>
+ 150 |     | <span class='unexecuted'>        if (timeSnapshots.length &lt; 2) return true;</span>
+ 151 |     | <span class='neutral'>        </span>
+ 152 |     | <span class='unexecuted'>        for (uint256 i = 1; i &lt; timeSnapshots.length; i++) {</span>
+ 153 |     | <span class='unexecuted'>            if (timeSnapshots[i] &lt; timeSnapshots[i-1]) {</span>
+ 154 |     | <span class='unexecuted'>                return false;</span>
+ 155 |     | <span class='neutral'>            }</span>
+ 156 |     | <span class='neutral'>        }</span>
+ 157 |     | <span class='unexecuted'>        return true;</span>
+ 158 |     | <span class='neutral'>    }</span>
+ 159 |     | <span class='neutral'>    </span>
+ 160 |     | <span class='neutral'>    // Function to calculate time velocity (time change per block)</span>
+ 161 |     | <span class='unexecuted'>    function getTimeVelocity() public view returns (uint256) {</span>
+ 162 |     | <span class='unexecuted'>        if (timeSnapshots.length &lt; 2) return 0;</span>
+ 163 |     | <span class='neutral'>        </span>
+ 164 |     | <span class='unexecuted'>        uint256 totalTimeChange = timeSnapshots[timeSnapshots.length - 1] - timeSnapshots[0];</span>
+ 165 |     | <span class='unexecuted'>        uint256 totalBlocks = timeSnapshots.length - 1;</span>
+ 166 |     | <span class='neutral'>        </span>
+ 167 |     | <span class='unexecuted'>        return totalTimeChange / totalBlocks;</span>
+ 168 |     | <span class='neutral'>    }</span>
+ 169 |     | <span class='neutral'>    </span>
+ 170 |     | <span class='neutral'>    // Echidna properties for advanced time testing</span>
+ 171 |     | <span class='unexecuted'>    function echidna_time_monotonic() public view returns (bool) {</span>
+ 172 |     | <span class='unexecuted'>        return isTimeProgressing();</span>
+ 173 |     | <span class='neutral'>    }</span>
+ 174 |     | <span class='neutral'>    </span>
+ 175 |     | <span class='unexecuted'>    function echidna_reasonable_time_velocity() public view returns (bool) {</span>
+ 176 |     | <span class='unexecuted'>        uint256 velocity = getTimeVelocity();</span>
+ 177 |     | <span class='neutral'>        // Time velocity should be reasonable (between 1 second and 1 hour per block)</span>
+ 178 |     | <span class='unexecuted'>        return velocity &gt;= 1 &amp;&amp; velocity &lt;= 3600;</span>
+ 179 |     | <span class='neutral'>    }</span>
+ 180 |     | <span class='neutral'>    </span>
+ 181 |     | <span class='unexecuted'>    function echidna_snapshots_consistent() public view returns (bool) {</span>
+ 182 |     | <span class='unexecuted'>        return timeSnapshots.length &gt; 0 &amp;&amp; timeSnapshots[0] == startTime;</span>
+ 183 |     | <span class='neutral'>    }</span>
+ 184 |     | <span class='neutral'>}</span>
+ 185 |     | <span class='neutral'></span>
+ 186 |     | <span class='neutral'>// Contract to test time-based vulnerabilities</span>
+ 187 |     | <span class='unexecuted'>contract TimeVulnerabilityTest {</span>
+ 188 |     | <span class='unexecuted'>    uint256 public lastUpdateTime;</span>
+ 189 |     | <span class='unexecuted'>    uint256 public value;</span>
+ 190 |     | <span class='unexecuted'>    bool public locked;</span>
+ 191 |     | <span class='neutral'>    </span>
+ 192 |     | <span class='unexecuted'>    constructor() {</span>
+ 193 |     | <span class='unexecuted'>        lastUpdateTime = block.timestamp;</span>
+ 194 |     | <span class='unexecuted'>        value = 100;</span>
+ 195 |     | <span class='unexecuted'>        locked = false;</span>
+ 196 |     | <span class='neutral'>    }</span>
+ 197 |     | <span class='neutral'>    </span>
+ 198 |     | <span class='neutral'>    // Function with time-based logic that might be vulnerable</span>
+ 199 |     | <span class='unexecuted'>    function updateValue(uint256 newValue) public {</span>
+ 200 |     | <span class='unexecuted'>        require(!locked, &quot;Contract is locked&quot;);</span>
+ 201 |     | <span class='unexecuted'>        require(block.timestamp &gt; lastUpdateTime + 60, &quot;Too soon to update&quot;);</span>
+ 202 |     | <span class='neutral'>        </span>
+ 203 |     | <span class='unexecuted'>        value = newValue;</span>
+ 204 |     | <span class='unexecuted'>        lastUpdateTime = block.timestamp;</span>
+ 205 |     | <span class='neutral'>    }</span>
+ 206 |     | <span class='neutral'>    </span>
+ 207 |     | <span class='neutral'>    // Function to lock the contract for a certain period</span>
+ 208 |     | <span class='unexecuted'>    function lockContract(uint256 duration) public {</span>
+ 209 |     | <span class='unexecuted'>        locked = true;</span>
+ 210 |     | <span class='neutral'>        // This could be vulnerable to time manipulation</span>
+ 211 |     | <span class='unexecuted'>        if (block.timestamp &gt; lastUpdateTime + duration) {</span>
+ 212 |     | <span class='unexecuted'>            locked = false;</span>
+ 213 |     | <span class='neutral'>        }</span>
+ 214 |     | <span class='neutral'>    }</span>
+ 215 |     | <span class='neutral'>    </span>
+ 216 |     | <span class='neutral'>    // Function to check if contract can be unlocked</span>
+ 217 |     | <span class='unexecuted'>    function canUnlock() public view returns (bool) {</span>
+ 218 |     | <span class='unexecuted'>        return block.timestamp &gt; lastUpdateTime + 300; // 5 minutes</span>
+ 219 |     | <span class='neutral'>    }</span>
+ 220 |     | <span class='neutral'>    </span>
+ 221 |     | <span class='neutral'>    // Emergency unlock (potential time-based vulnerability)</span>
+ 222 |     | <span class='unexecuted'>    function emergencyUnlock() public {</span>
+ 223 |     | <span class='unexecuted'>        require(block.timestamp &gt; lastUpdateTime + 86400, &quot;24 hours not passed&quot;); // 24 hours</span>
+ 224 |     | <span class='unexecuted'>        locked = false;</span>
+ 225 |     | <span class='neutral'>    }</span>
+ 226 |     | <span class='neutral'>    </span>
+ 227 |     | <span class='neutral'>    // Echidna properties to test time-based vulnerabilities</span>
+ 228 |     | <span class='unexecuted'>    function echidna_no_immediate_double_update() public view returns (bool) {</span>
+ 229 |     | <span class='neutral'>        // This property might fail if time manipulation is possible</span>
+ 230 |     | <span class='unexecuted'>        return true; // Simplified for demonstration</span>
+ 231 |     | <span class='neutral'>    }</span>
+ 232 |     | <span class='neutral'>    </span>
+ 233 |     | <span class='unexecuted'>    function echidna_lock_consistency() public view returns (bool) {</span>
+ 234 |     | <span class='neutral'>        // Check that lock state is consistent with time</span>
+ 235 |     | <span class='unexecuted'>        if (locked) {</span>
+ 236 |     | <span class='unexecuted'>            return block.timestamp &lt;= lastUpdateTime + 86400;</span>
+ 237 |     | <span class='neutral'>        }</span>
+ 238 |     | <span class='unexecuted'>        return true;</span>
+ 239 |     | <span class='neutral'>    }</span>
+ 240 |     | <span class='neutral'>    </span>
+ 241 |     | <span class='unexecuted'>    function echidna_value_update_time_check() public view returns (bool) {</span>
+ 242 |     | <span class='neutral'>        // Value should only be updatable after sufficient time has passed</span>
+ 243 |     | <span class='unexecuted'>        return lastUpdateTime &lt;= block.timestamp;</span>
+ 244 |     | <span class='neutral'>    }</span>
+ 245 |     | <span class='neutral'>}</span>
+ 246 |     | <span class='neutral'></span>
+
+</code>
+<br />
+
